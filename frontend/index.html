@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>МАХ-Инспектор</title>
+  <script src="https://st.max.ru/js/max-web-app.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #ffffff;
+      color: #111111;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 16px;
+      line-height: 1.45;
+    }
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #d0d0d0;
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+    }
+    .btn-back {
+      background: none;
+      border: 1px solid #777777;
+      color: #111111;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-back:disabled {
+      visibility: hidden;
+    }
+    .header-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: #555555;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: 19px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #111111;
+    }
+    h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+    p {
+      font-size: 14px;
+      color: #333333;
+      margin-bottom: 12px;
+    }
+    .code-badge {
+      display: inline-block;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      background: #f2f2f2;
+      padding: 8px 12px;
+      border: 1px solid #999999;
+      margin: 6px 0 12px 0;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #222222;
+    }
+    input[type="text"],
+    input[type="password"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid #888888;
+      border-radius: 0;
+      font-size: 14px;
+      background: #ffffff;
+      color: #111111;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background-color: #111111;
+      color: #ffffff;
+      border: 1px solid #111111;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .btn-secondary {
+      background-color: #ffffff;
+      color: #111111;
+      border: 1px solid #777777;
+    }
+    .btn-small {
+      display: inline-block;
+      width: auto;
+      padding: 6px 12px;
+      font-size: 12px;
+      margin-bottom: 0;
+    }
+    .btn:disabled {
+      background-color: #d6d6d6;
+      border-color: #d6d6d6;
+      color: #777777;
+      cursor: not-allowed;
+    }
+    .item-card {
+      border: 1px solid #cccccc;
+      padding: 12px;
+      margin-bottom: 12px;
+      background: #fafafa;
+    }
+    .item-card-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .item-card-meta {
+      font-size: 12px;
+      color: #555555;
+      margin-bottom: 4px;
+    }
+    .item-card-fine {
+      font-size: 12px;
+      color: #880000;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .position-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #eeeeee;
+    }
+    .position-row input[type="number"] {
+      width: 70px;
+      padding: 5px;
+      text-align: center;
+    }
+    .duty-card {
+      border-left: 3px solid #333333;
+      background: #ffffff;
+      border-top: 1px solid #e0e0e0;
+      border-right: 1px solid #e0e0e0;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .duty-card.done {
+      border-left-color: #1b7a2b;
+      background: #f4faf4;
+    }
+    .duty-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .duty-norm {
+      font-size: 12px;
+      color: #555555;
+      margin-bottom: 4px;
+    }
+    .duty-fine {
+      font-size: 12px;
+      color: #990000;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .duty-check-label {
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    .duty-check-label input {
+      margin-right: 8px;
+      width: 17px;
+      height: 17px;
+    }
+    .status-box {
+      border: 1px solid #222222;
+      padding: 10px 12px;
+      margin: 12px 0;
+      font-size: 13px;
+      background: #f8f8f8;
+    }
+    .status-box.error {
+      border-color: #990000;
+      background: #fdf2f2;
+      color: #880000;
+    }
+    .status-box.success {
+      border-color: #1b7a2b;
+      background: #f0f8f0;
+      color: #137333;
+    }
+    .screen {
+      display: none;
+    }
+    .screen.active {
+      display: block;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #cccccc;
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 6px;
+      background: #f7f7f7;
+      border: 1px solid #cccccc;
+      border-bottom: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      color: #555555;
+    }
+    .tab-btn.active {
+      background: #ffffff;
+      color: #111111;
+      border-top: 2px solid #111111;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .metric-card {
+      border: 1px solid #dddddd;
+      padding: 10px;
+      background: #fafafa;
+    }
+    .metric-title {
+      font-size: 11px;
+      color: #666666;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .metric-value {
+      font-size: 17px;
+      font-weight: 700;
+      color: #111111;
+    }
+    .staff-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      margin-bottom: 14px;
+      font-size: 12px;
+    }
+    .staff-table th, .staff-table td {
+      border: 1px solid #e0e0e0;
+      padding: 7px 8px;
+      text-align: left;
+    }
+    .staff-table th {
+      background: #f4f4f4;
+      font-weight: 600;
+    }
+    .badge-linked {
+      display: inline-block;
+      padding: 2px 6px;
+      background: #e6f4ea;
+      color: #137333;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-unlinked {
+      display: inline-block;
+      padding: 2px 6px;
+      background: #fef7e0;
+      color: #b06000;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-active {
+      display: inline-block;
+      padding: 2px 6px;
+      background: #e8f0fe;
+      color: #1a73e8;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .photo-upload-row {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed #dddddd;
+      font-size: 12px;
+    }
+    .photo-preview-link {
+      display: inline-block;
+      margin-top: 4px;
+      color: #137333;
+      text-decoration: underline;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-bar">
+    <button id="globalBackBtn" class="btn-back" onclick="navigateBack()">Назад</button>
+    <div id="headerTitle" class="header-title">МАХ-Инспектор</div>
+  </div>
+
+  <!-- Landing screen: only shown if URL has no role and no session -->
+  <div id="screenLanding" class="screen">
+    <h1>МАХ-Инспектор</h1>
+    <p>Сервис контроля санитарных требований и подготовки к надзорным проверкам.</p>
+
+    <div class="item-card" style="margin-top: 20px;">
+      <div class="item-card-title">Вход для персонала</div>
+      <p style="font-size: 13px;">Введите регистрационный номер заведения, выданный руководителем:</p>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="landingFacilityCode" placeholder="4819-2051" maxlength="9">
+        <button type="button" class="btn btn-small" onclick="handleLandingCodeSubmit()">Войти</button>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px; border-top: 1px solid #e0e0e0; padding-top: 14px;">
+      <p style="font-size: 12px; color: #666666;">Вход для руководителя:</p>
+      <button class="btn btn-secondary" style="font-size: 12px; padding: 8px;" onclick="openOwnerAuthModal()">Войти в панель владельца</button>
+    </div>
+  </div>
+
+  <!-- Owner Step 1: location & security pin -->
+  <div id="screenOwnerStep1" class="screen">
+    <h1>Параметры объекта</h1>
+    <p>Шаг 1 из 3. Укажите наименование, адрес и установите персональный ПИН-код администратора.</p>
+
+    <div class="form-group">
+      <label for="venueName">Наименование заведения:</label>
+      <input type="text" id="venueName" placeholder="Кафе Центральное">
+    </div>
+
+    <div class="form-group">
+      <label for="venuePin">Секретный ПИН-код администратора (4 цифры):</label>
+      <input type="text" id="venuePin" placeholder="7391" maxlength="4">
+      <p style="font-size: 11px; color: #666666;">Запомните этот код. Он потребуется для доступа к панели управления.</p>
+    </div>
+
+    <div class="form-group">
+      <label for="venueAddress">Адрес объекта:</label>
+      <input type="text" id="venueAddress" placeholder="г. Казань, ул. Петербургская, д. 28">
+    </div>
+
+    <div class="form-group">
+      <label>Географические координаты:</label>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="venueLat" placeholder="Широта: 55.783611">
+        <input type="text" id="venueLon" placeholder="Долгота: 49.129444">
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-secondary" onclick="detectOwnerLocation()">Определить координаты устройства</button>
+    <div id="ownerGeoStatus" class="status-box" style="display:none;"></div>
+
+    <button class="btn" onclick="saveOwnerStep1(false)">Далее</button>
+    <button class="btn btn-secondary" onclick="saveOwnerStep1(true)">Пропустить шаг (контроль геопозиции не требуется)</button>
+  </div>
+
+  <!-- Owner Step 2: staff roster -->
+  <div id="screenOwnerStep2" class="screen">
+    <h1>Штат сотрудников</h1>
+    <p>Шаг 2 из 3. Сформируйте список должностей и добавьте сотрудников в штат.</p>
+
+    <h2>Перечень должностей</h2>
+    <div id="positionsList"></div>
+
+    <div class="form-group" style="margin-top: 14px;">
+      <label for="newPositionName">Добавить новую должность:</label>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="newPositionName" placeholder="Бариста">
+        <button type="button" class="btn btn-small" onclick="addNewPosition()">Добавить</button>
+      </div>
+    </div>
+
+    <h2 style="margin-top: 20px;">Список сотрудников</h2>
+    <p style="font-size: 12px; color: #555555;">Внесите сотрудников, чтобы они могли выбрать себя из списка при входе:</p>
+    <div id="setupStaffList"></div>
+
+    <div class="item-card" style="margin-top: 10px;">
+      <div class="form-group">
+        <label for="setupNewStaffName">Фамилия и имя сотрудника:</label>
+        <input type="text" id="setupNewStaffName" placeholder="Иванов Алексей">
+      </div>
+      <div class="form-group">
+        <label for="setupNewStaffPosition">Должность:</label>
+        <select id="setupNewStaffPosition"></select>
+      </div>
+      <button type="button" class="btn btn-secondary btn-small" onclick="addStaffMemberToSetup()">Добавить в штат</button>
+    </div>
+
+    <button class="btn" style="margin-top: 16px;" onclick="saveOwnerStep2()">Далее к распределению обязанностей</button>
+  </div>
+
+  <!-- Owner Step 3: duties -->
+  <div id="screenOwnerStep3" class="screen">
+    <h1>Распределение обязанностей</h1>
+    <p>Шаг 3 из 3. Закрепите за должностями обязательные санитарные нормы СанПиН 2.3/2.4.3590-20.</p>
+
+    <div id="dutiesAssignmentList"></div>
+
+    <h2>Дополнительное требование</h2>
+    <div class="form-group">
+      <label for="customDutyName">Формулировка требования:</label>
+      <input type="text" id="customDutyName" placeholder="Протереть контактные поверхности обеденных столов">
+    </div>
+    <div class="form-group">
+      <label for="customDutyFine">Размер штрафа при нарушении:</label>
+      <input type="text" id="customDutyFine" placeholder="10 000 – 30 000 руб.">
+    </div>
+    <button type="button" class="btn btn-secondary" onclick="addCustomDuty()">Внести требование в перечень</button>
+
+    <button class="btn" style="margin-top: 16px;" onclick="finishOwnerSetup()">Завершить настройку и открыть панель управления</button>
+  </div>
+
+  <!-- Owner Dashboard screen -->
+  <div id="screenOwnerDashboard" class="screen">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+      <div>
+        <h1 id="dashVenueName" style="margin-bottom: 2px;">Панель управления заведением</h1>
+        <div style="font-size: 12px; color: #555555;">
+          Номер объекта: <strong id="dashFacilityCode">0000-0000</strong>
+        </div>
+      </div>
+      <button class="btn-back" onclick="refreshDashboardData()">Обновить</button>
+    </div>
+
+    <div class="tabs">
+      <button id="tabBtnShift" class="tab-btn active" onclick="switchDashboardTab('shift')">Текущая смена</button>
+      <button id="tabBtnManagement" class="tab-btn" onclick="switchDashboardTab('management')">Управление и комплаенс</button>
+    </div>
+
+    <!-- Tab 1: Current Shift -->
+    <div id="tabContentShift" class="tab-content active">
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-title">Сотрудников на смене</div>
+          <div id="metricStaffCount" class="metric-value">0 из 0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Предотвращено штрафов</div>
+          <div id="metricFinesSaved" class="metric-value">0 руб.</div>
+        </div>
+      </div>
+
+      <h2>Персонал на объекте</h2>
+      <div id="activeStaffList"></div>
+
+      <div style="margin-top: 16px;">
+        <button class="btn btn-secondary" onclick="closeWebAppAndReturnToBot()">Вернуться в чат с ботом</button>
+      </div>
+    </div>
+
+    <!-- Tab 2: Management & Compliance -->
+    <div id="tabContentManagement" class="tab-content">
+      <h2>Параметры объекта</h2>
+      <div class="item-card">
+        <div class="item-card-meta">Адрес: <strong id="mgmtAddress">г. Казань, ул. Петербургская, д. 28</strong></div>
+        <div class="item-card-meta">Координаты: <strong id="mgmtCoords">55.783611, 49.129444</strong></div>
+        <div class="item-card-meta">Контроль геопозиции: <strong id="mgmtGeoStatus">Включен (радиус 100 м)</strong></div>
+      </div>
+
+      <h2>Штатное расписание</h2>
+      <table class="staff-table">
+        <thead>
+          <tr>
+            <th>ФИО</th>
+            <th>Должность</th>
+            <th>Статус в MAX</th>
+            <th>Действие</th>
+          </tr>
+        </thead>
+        <tbody id="mgmtStaffTableBody"></tbody>
+      </table>
+
+      <div class="item-card">
+        <div class="item-card-title">Добавить сотрудника в штат</div>
+        <div class="form-group" style="margin-top: 8px;">
+          <label for="dashNewStaffName">Фамилия и имя:</label>
+          <input type="text" id="dashNewStaffName" placeholder="Николаев Дмитрий">
+        </div>
+        <div class="form-group">
+          <label for="dashNewStaffPosition">Должность:</label>
+          <select id="dashNewStaffPosition"></select>
+        </div>
+        <button class="btn btn-secondary btn-small" onclick="addStaffMemberFromDashboard()">Добавить сотрудника</button>
+      </div>
+
+      <h2 style="margin-top: 18px;">Самообследование по ст. 51 248-ФЗ</h2>
+      <div class="item-card">
+        <div class="item-card-title">Декларация соблюдения обязательных требований</div>
+        <div class="item-card-meta">Сформированная декларация направляется в контрольный орган и освобождает объект от плановых проверок на срок до 3 лет.</div>
+        <div class="item-card-meta" style="margin-top: 6px;">Уровень соответствия СанПиН: <strong>100%</strong></div>
+        <a href="https://www.consultant.ru/document/cons_doc_LAW_358890/578f4477c77c1d76378415d86ef8e3648e42994c/" target="_blank" class="btn btn-secondary btn-small" style="text-decoration:none; margin-top:8px;">Открыть текст статьи 51 248-ФЗ</a>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <button class="btn" onclick="showScreen('screenOwnerStep1')">Редактировать параметры заведения</button>
+        <button class="btn btn-secondary" onclick="closeWebAppAndReturnToBot()">Вернуться в чат с ботом</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Owner Auth Modal / Screen -->
+  <div id="screenOwnerAuth" class="screen">
+    <h1>Вход в панель управления</h1>
+    <p>Для доступа к управлению объектом введите регистрационный номер и ПИН-код:</p>
+
+    <div class="form-group">
+      <label for="authFacilityCode">Номер заведения (формат ХХХХ-ХХХХ):</label>
+      <input type="text" id="authFacilityCode" placeholder="4819-2051" maxlength="9">
+    </div>
+
+    <div class="form-group">
+      <label for="authAdminPin">ПИН-код администратора:</label>
+      <input type="password" id="authAdminPin" placeholder="4 цифры" maxlength="4">
+    </div>
+
+    <button class="btn" onclick="submitOwnerAuth()">Войти</button>
+    <button class="btn btn-secondary" onclick="navigateBack()">Отмена</button>
+  </div>
+
+  <!-- Employee register screen -->
+  <div id="screenEmployeeRegister" class="screen">
+    <h1>Рабочее место сотрудника</h1>
+    <p>Введите регистрационный номер заведения, выданный руководителем:</p>
+
+    <div class="form-group">
+      <label for="empFacilityCode">Номер заведения (формат ХХХХ-ХХХХ):</label>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="empFacilityCode" placeholder="4819-2051" maxlength="9">
+        <button type="button" class="btn btn-small" style="white-space: nowrap;" onclick="loadFacilityRosterForEmployee()">Найти</button>
+      </div>
+    </div>
+
+    <div id="empRosterSection" style="display:none; margin-top: 14px;">
+      <div class="item-card">
+        <div class="item-card-title" id="empFoundVenueName">Кафе Центральное</div>
+        <div class="item-card-meta" id="empFoundVenueAddress">г. Казань, ул. Петербургская, д. 28</div>
+      </div>
+
+      <div class="form-group">
+        <label for="empRosterSelect">Выберите вашу фамилию из штатного расписания:</label>
+        <select id="empRosterSelect"></select>
+      </div>
+
+      <button class="btn" onclick="confirmEmployeeRosterClaim()">Подтвердить профиль</button>
+    </div>
+
+    <div id="empClaimStatusBox" class="status-box success" style="display:none;"></div>
+
+    <div id="empManualFallback" style="margin-top: 20px; border-top: 1px solid #e0e0e0; padding-top: 14px;">
+      <p style="font-size: 12px; color: #666666;">Вход для руководителя:</p>
+      <button class="btn btn-secondary" style="font-size: 12px; padding: 8px;" onclick="openOwnerAuthModal()">Перейти в панель владельца</button>
+    </div>
+  </div>
+
+  <!-- Employee shift screen -->
+  <div id="screenEmployeeShift" class="screen">
+    <h1>Смена сотрудника</h1>
+    <div id="empProfileCard" class="item-card"></div>
+
+    <div id="shiftStatusBox" class="status-box">
+      Статус: Смена не открыта. Подтвердите присутствие на объекте.
+    </div>
+
+    <div id="employeeTasksSection" style="display:none; margin-top: 16px;">
+      <h2>Обязательные требования на смену</h2>
+      <p>Отметьте выполненные требования для исключения штрафов при надзорной проверке:</p>
+      <div id="employeeTasksList"></div>
+
+      <div style="margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="endEmployeeShiftFromWeb()">Завершить смену</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Ready max webapp
+    if (window.WebApp) {
+      window.WebApp.ready();
+    }
+
+    // Main state
+    let appState = {
+      facilityCode: "",
+      adminPin: "",
+      user_id: 0,
+      role: "",
+      history: [],
+      venue: {
+        name: "Объект общественного питания",
+        address: "г. Казань, ул. Петербургская, д. 28",
+        lat: 55.783611,
+        lon: 49.129444,
+        geoRequired: true,
+        staffCount: 3
+      },
+      positions: [
+        { name: "Повар", count: 1 },
+        { name: "Официант", count: 1 },
+        { name: "Уборщик", count: 1 }
+      ],
+      staffList: [
+        { full_name: "Иванов Алексей", position: "Повар" },
+        { full_name: "Петрова Анна", position: "Официант" },
+        { full_name: "Сидоров Иван", position: "Уборщик" }
+      ],
+      backendStaff: [],
+      duties: [],
+      employee: {
+        id: 0,
+        facilityCode: "",
+        name: "",
+        position: "Повар",
+        shiftStarted: false,
+        shiftStartTime: null,
+        lastGeoDistance: null,
+        completedTasks: [],
+        taskPhotos: {}
+      }
+    };
+
+    // Load norms
+    async function loadChecklists() {
+      try {
+        const res = await fetch("checklists.json");
+        const list = await res.json();
+        appState.duties = list.map((item, idx) => {
+          let fineNum = 30000;
+          if (item.fines && item.fines.legal_entity) {
+            const m = item.fines.legal_entity.replace(/\s+/g, "").match(/(\d+)/);
+            if (m) fineNum = parseInt(m[1]) * 1000;
+          }
+          return {
+            id: idx + 1,
+            zone: item.zone,
+            question: item.question,
+            norm: item.norm,
+            violation: item.violation,
+            article: item.article,
+            fineText: item.fines ? item.fines.legal_entity : "30 000 – 50 000 ₽",
+            fineAmount: fineNum,
+            assignedTo: getDefaultRoleForZone(item.zone)
+          };
+        });
+      } catch (e) {
+        appState.duties = [
+          { id: 1, zone: "Склад", question: "Ведется ли ежедневная регистрация температуры и влажности в помещениях хранения?", norm: "п. 3.8 СанПиН 2.3/2.4.3590-20", fineText: "30 000 – 50 000 ₽", fineAmount: 30000, assignedTo: "Повар" },
+          { id: 2, zone: "Кухня", question: "Обеспечена ли раздельная маркировка разделочного инвентаря для сырой и готовой продукции?", norm: "п. 3.6 СанПиН 2.3/2.4.3590-20", fineText: "30 000 – 50 000 ₽", fineAmount: 30000, assignedTo: "Повар" },
+          { id: 3, zone: "Мойка", question: "Соблюдается ли инструкция по приготовлению и концентрации дезинфицирующих растворов?", norm: "п. 4.5 СанПиН 2.3/2.4.3590-20", fineText: "30 000 – 50 000 ₽", fineAmount: 30000, assignedTo: "Уборщик" },
+          { id: 4, zone: "Персонал", question: "Наличие личных медицинских книжек с отметками о прохождении медосмотра?", norm: "п. 13.1 СанПиН 2.3/2.4.3590-20", fineText: "50 000 – 100 000 ₽", fineAmount: 50000, assignedTo: "Официант" }
+        ];
+      }
+    }
+
+    function getDefaultRoleForZone(zone) {
+      if (zone === "Кухня" || zone === "Холодильники" || zone === "Склад") return "Повар";
+      if (zone === "Мойка") return "Уборщик";
+      return "Официант";
+    }
+
+    // Show screen
+    function showScreen(screenId, pushHistory = true) {
+      const current = document.querySelector(".screen.active");
+      if (current && pushHistory && current.id !== screenId) {
+        appState.history.push(current.id);
+      }
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      const target = document.getElementById(screenId);
+      if (target) target.classList.add("active");
+
+      const backBtn = document.getElementById("globalBackBtn");
+      backBtn.disabled = (appState.history.length === 0 || screenId === "screenLanding" || screenId === "screenOwnerDashboard");
+    }
+
+    // Go back
+    function navigateBack() {
+      if (appState.history.length > 0) {
+        const prev = appState.history.pop();
+        showScreen(prev, false);
+      }
+    }
+
+    // Close app
+    function closeWebAppAndReturnToBot() {
+      if (window.WebApp && window.WebApp.close) {
+        window.WebApp.close();
+      } else {
+        window.location.href = "https://max.ru/t658_hakaton_max_bot";
+      }
+    }
+
+    // Handle landing code submit
+    function handleLandingCodeSubmit() {
+      const code = document.getElementById("landingFacilityCode").value.trim();
+      if (!code) {
+        alert("Введите номер заведения");
+        return;
+      }
+      appState.facilityCode = code;
+      document.getElementById("empFacilityCode").value = code;
+      loadFacilityRosterForEmployee();
+      showScreen("screenEmployeeRegister");
+    }
+
+    // Open owner auth modal
+    function openOwnerAuthModal() {
+      if (appState.facilityCode) {
+        document.getElementById("authFacilityCode").value = appState.facilityCode;
+      }
+      showScreen("screenOwnerAuth");
+    }
+
+    // Submit owner auth
+    async function submitOwnerAuth() {
+      const code = document.getElementById("authFacilityCode").value.trim();
+      const pin = document.getElementById("authAdminPin").value.trim();
+      if (!code || !pin) {
+        alert("Заполните номер заведения и ПИН-код");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/facility/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: code, admin_pin: pin })
+        });
+
+        if (res.ok) {
+          appState.facilityCode = code;
+          appState.adminPin = pin;
+          appState.role = "owner";
+          localStorage.setItem("app_role", "owner");
+          localStorage.setItem("app_code", code);
+          localStorage.setItem("owner_pin_" + code, pin);
+          await loadOwnerDashboard();
+          showScreen("screenOwnerDashboard");
+        } else {
+          alert("Неверный номер заведения или ПИН-код администратора.");
+        }
+      } catch (e) {
+        alert("Ошибка авторизации.");
+      }
+    }
+
+    // GPS location
+    function detectOwnerLocation() {
+      const box = document.getElementById("ownerGeoStatus");
+      box.style.display = "block";
+      box.className = "status-box";
+      box.textContent = "Запрос координат устройства...";
+
+      if (!navigator.geolocation) {
+        box.className = "status-box error";
+        box.textContent = "Служба геолокации недоступна в данном браузере.";
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          document.getElementById("venueLat").value = pos.coords.latitude.toFixed(6);
+          document.getElementById("venueLon").value = pos.coords.longitude.toFixed(6);
+          box.className = "status-box success";
+          box.textContent = `Координаты зафиксированы: ${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+        },
+        (err) => {
+          box.className = "status-box error";
+          box.textContent = `Координаты не получены (${err.message}). Введите значения вручную или пропустите шаг.`;
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+
+    // Save step 1
+    function saveOwnerStep1(skip) {
+      const pinVal = document.getElementById("venuePin").value.trim();
+      if (pinVal) {
+        appState.adminPin = pinVal;
+      } else if (!appState.adminPin) {
+        appState.adminPin = "1234";
+      }
+
+      if (skip) {
+        appState.venue.geoRequired = false;
+        appState.venue.lat = null;
+        appState.venue.lon = null;
+      } else {
+        const nameVal = document.getElementById("venueName").value.trim();
+        if (nameVal) appState.venue.name = nameVal;
+        appState.venue.address = document.getElementById("venueAddress").value.trim();
+        const lat = parseFloat(document.getElementById("venueLat").value);
+        const lon = parseFloat(document.getElementById("venueLon").value);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          appState.venue.lat = lat;
+          appState.venue.lon = lon;
+          appState.venue.geoRequired = true;
+        } else {
+          appState.venue.geoRequired = false;
+        }
+      }
+      renderPositionsList();
+      renderSetupStaffList();
+      populateSetupPositionSelect();
+      showScreen("screenOwnerStep2");
+    }
+
+    // Render positions
+    function renderPositionsList() {
+      const cont = document.getElementById("positionsList");
+      cont.innerHTML = "";
+      appState.positions.forEach((pos, idx) => {
+        const row = document.createElement("div");
+        row.className = "position-row";
+        row.innerHTML = `
+          <span>${pos.name}</span>
+          <div>
+            <label style="display:inline; margin-right:6px; font-size:12px;">штат:</label>
+            <input type="number" min="0" value="${pos.count}" onchange="updatePositionCount(${idx}, this.value)">
+          </div>
+        `;
+        cont.appendChild(row);
+      });
+    }
+
+    function updatePositionCount(idx, val) {
+      appState.positions[idx].count = parseInt(val) || 0;
+    }
+
+    // Add position
+    function addNewPosition() {
+      const input = document.getElementById("newPositionName");
+      const name = input.value.trim();
+      if (!name) return;
+      appState.positions.push({ name: name, count: 1 });
+      input.value = "";
+      renderPositionsList();
+      populateSetupPositionSelect();
+    }
+
+    // Render staff roster in step 2
+    function renderSetupStaffList() {
+      const cont = document.getElementById("setupStaffList");
+      cont.innerHTML = "";
+      if (appState.staffList.length === 0) {
+        cont.innerHTML = "<p style='font-size:12px; color:#777777;'>Сотрудники еще не добавлены.</p>";
+        return;
+      }
+      appState.staffList.forEach((st, idx) => {
+        const card = document.createElement("div");
+        card.className = "position-row";
+        card.innerHTML = `
+          <span><strong>${st.full_name}</strong> &mdash; ${st.position}</span>
+          <button type="button" class="btn-back" style="padding:2px 8px; font-size:11px;" onclick="removeSetupStaffMember(${idx})">Удалить</button>
+        `;
+        cont.appendChild(card);
+      });
+    }
+
+    function populateSetupPositionSelect() {
+      const select = document.getElementById("setupNewStaffPosition");
+      select.innerHTML = "";
+      appState.positions.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.name;
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      });
+    }
+
+    function addStaffMemberToSetup() {
+      const nameInput = document.getElementById("setupNewStaffName");
+      const posSelect = document.getElementById("setupNewStaffPosition");
+      const name = nameInput.value.trim();
+      const pos = posSelect.value;
+      if (!name) {
+        alert("Введите фамилию и имя сотрудника");
+        return;
+      }
+      appState.staffList.push({ full_name: name, position: pos });
+      nameInput.value = "";
+      renderSetupStaffList();
+    }
+
+    function removeSetupStaffMember(idx) {
+      appState.staffList.splice(idx, 1);
+      renderSetupStaffList();
+    }
+
+    // Save step 2
+    function saveOwnerStep2() {
+      appState.venue.staffCount = appState.staffList.length;
+      renderDutiesAssignment();
+      showScreen("screenOwnerStep3");
+    }
+
+    // Render duties
+    function renderDutiesAssignment() {
+      const cont = document.getElementById("dutiesAssignmentList");
+      cont.innerHTML = "";
+
+      appState.duties.forEach((duty, idx) => {
+        const card = document.createElement("div");
+        card.className = "item-card";
+
+        let selectOptions = `<option value="Не назначено">Не назначено</option>`;
+        appState.positions.forEach(p => {
+          const selected = (duty.assignedTo === p.name) ? "selected" : "";
+          selectOptions += `<option value="${p.name}" ${selected}>${p.name}</option>`;
+        });
+
+        card.innerHTML = `
+          <div class="item-card-title">${duty.question}</div>
+          <div class="item-card-meta">${duty.norm} (Зона: ${duty.zone})</div>
+          <div class="item-card-fine">Штраф юридического лица: ${duty.fineText}</div>
+          <label style="font-size:12px;">Ответственная должность:</label>
+          <select onchange="appState.duties[${idx}].assignedTo = this.value">
+            ${selectOptions}
+          </select>
+        `;
+        cont.appendChild(card);
+      });
+    }
+
+    function addCustomDuty() {
+      const name = document.getElementById("customDutyName").value.trim();
+      const fine = document.getElementById("customDutyFine").value.trim() || "10 000 – 30 000 руб.";
+      if (!name) return;
+
+      appState.duties.push({
+        id: appState.duties.length + 1,
+        zone: "Внутренний распорядок",
+        question: name,
+        norm: "Регламент предприятия",
+        fineText: fine,
+        fineAmount: 20000,
+        assignedTo: appState.positions[0] ? appState.positions[0].name : "Не назначено"
+      });
+
+      document.getElementById("customDutyName").value = "";
+      document.getElementById("customDutyFine").value = "";
+      renderDutiesAssignment();
+    }
+
+    // Finish owner setup -> Open Dashboard directly
+    async function finishOwnerSetup() {
+      try {
+        await fetch(`/api/facility/${appState.facilityCode}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: appState.venue.name,
+            address: appState.venue.address,
+            geo_lat: appState.venue.lat,
+            geo_lon: appState.venue.lon,
+            geo_required: appState.venue.geoRequired,
+            admin_pin: appState.adminPin,
+            staff_count: appState.staffList.length,
+            positions: appState.positions,
+            duties: appState.duties,
+            staff_list: appState.staffList
+          })
+        });
+
+        localStorage.setItem("app_role", "owner");
+        localStorage.setItem("app_code", appState.facilityCode);
+        if (appState.adminPin) {
+          localStorage.setItem("owner_pin_" + appState.facilityCode, appState.adminPin);
+        }
+      } catch (e) {}
+
+      await loadOwnerDashboard();
+      showScreen("screenOwnerDashboard");
+    }
+
+    // Switch dashboard tabs
+    function switchDashboardTab(tabName) {
+      const btnShift = document.getElementById("tabBtnShift");
+      const btnMgmt = document.getElementById("tabBtnManagement");
+      const contentShift = document.getElementById("tabContentShift");
+      const contentMgmt = document.getElementById("tabContentManagement");
+
+      if (tabName === "shift") {
+        btnShift.classList.add("active");
+        btnMgmt.classList.remove("active");
+        contentShift.classList.add("active");
+        contentMgmt.classList.remove("active");
+      } else {
+        btnMgmt.classList.add("active");
+        btnShift.classList.remove("active");
+        contentMgmt.classList.add("active");
+        contentShift.classList.remove("active");
+      }
+    }
+
+    // Load owner dashboard
+    async function loadOwnerDashboard() {
+      document.getElementById("dashVenueName").textContent = appState.venue.name;
+      document.getElementById("dashFacilityCode").textContent = appState.facilityCode;
+
+      try {
+        const res = await fetch(`/api/facility/${appState.facilityCode}`);
+        if (res.ok) {
+          const data = await res.json();
+          appState.backendStaff = data.staff || [];
+          if (data.name) appState.venue.name = data.name;
+          if (data.address) appState.venue.address = data.address;
+          appState.venue.lat = data.geo_lat;
+          appState.venue.lon = data.geo_lon;
+          appState.venue.geoRequired = data.geo_required;
+          appState.positions = data.positions || appState.positions;
+          appState.duties = data.duties || appState.duties;
+        }
+      } catch (e) {}
+
+      renderDashboardShiftTab();
+      renderDashboardManagementTab();
+    }
+
+    async function refreshDashboardData() {
+      await loadOwnerDashboard();
+    }
+
+    // Render tab 1
+    function renderDashboardShiftTab() {
+      const staff = appState.backendStaff;
+      const activeStaff = staff.filter(s => s.shift_active);
+
+      let totalTasksDone = 0;
+      let totalFinesSaved = 0;
+
+      activeStaff.forEach(s => {
+        const doneTasks = s.completed_tasks || [];
+        totalTasksDone += doneTasks.length;
+        doneTasks.forEach(tId => {
+          const duty = appState.duties.find(d => d.id === tId);
+          totalFinesSaved += duty ? duty.fineAmount : 30000;
+        });
+      });
+
+      document.getElementById("metricStaffCount").textContent = `${activeStaff.length} из ${staff.length}`;
+      document.getElementById("metricFinesSaved").textContent = `${totalFinesSaved.toLocaleString("ru-RU")} руб.`;
+
+      const listCont = document.getElementById("activeStaffList");
+      listCont.innerHTML = "";
+
+      if (activeStaff.length === 0) {
+        listCont.innerHTML = `
+          <div class="status-box">
+            В данный момент на смене нет активных сотрудников.<br>
+            Сотрудники открывают смену через подтверждение геолокации в боте МАХ.
+          </div>
+        `;
+        return;
+      }
+
+      activeStaff.forEach(s => {
+        const card = document.createElement("div");
+        card.className = "item-card";
+
+        const tasksDone = (s.completed_tasks || []).length;
+        const distText = s.last_geo_distance !== null ? `${s.last_geo_distance} м` : "без гео";
+
+        let photosHtml = "";
+        const photos = s.task_photos || {};
+        const photoKeys = Object.keys(photos);
+        if (photoKeys.length > 0) {
+          photosHtml = `<div class="photo-upload-row">Прикреплено фотоотчетов: <strong>${photoKeys.length}</strong></div>`;
+        }
+
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="item-card-title">${s.full_name}</div>
+            <span class="badge-active">На смене с ${s.shift_started_at || "08:00"}</span>
+          </div>
+          <div class="item-card-meta">Должность: <strong>${s.position}</strong></div>
+          <div class="item-card-meta">Дистанция при входе: <strong>${distText}</strong></div>
+          <div class="item-card-meta">Выполнено обязательных требований: <strong>${tasksDone}</strong></div>
+          ${photosHtml}
+        `;
+        listCont.appendChild(card);
+      });
+    }
+
+    // Render tab 2
+    function renderDashboardManagementTab() {
+      document.getElementById("mgmtAddress").textContent = appState.venue.address || "Не указан";
+      document.getElementById("mgmtCoords").textContent = (appState.venue.lat && appState.venue.lon)
+        ? `${appState.venue.lat}, ${appState.venue.lon}`
+        : "Не заданы";
+      document.getElementById("mgmtGeoStatus").textContent = appState.venue.geoRequired
+        ? "Включен (радиус 100 м)"
+        : "Отключен";
+
+      const tbody = document.getElementById("mgmtStaffTableBody");
+      tbody.innerHTML = "";
+
+      const staff = appState.backendStaff;
+      if (staff.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#777777;">Сотрудники не внесены</td></tr>`;
+      } else {
+        staff.forEach(s => {
+          const tr = document.createElement("tr");
+          const statusBadge = s.user_id
+            ? `<span class="badge-linked">Привязан</span>`
+            : `<span class="badge-unlinked">Ожидает входа</span>`;
+
+          let actionBtn = s.user_id
+            ? `<button class="btn-back" style="padding:2px 6px; font-size:11px;" onclick="unlinkStaffMember(${s.id})">Сбросить</button>`
+            : `<span style="font-size:11px; color:#888888;">&mdash;</span>`;
+
+          tr.innerHTML = `
+            <td><strong>${s.full_name}</strong></td>
+            <td>${s.position}</td>
+            <td>${statusBadge}</td>
+            <td>${actionBtn}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Populate position select in dashboard
+      const select = document.getElementById("dashNewStaffPosition");
+      select.innerHTML = "";
+      appState.positions.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.name;
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      });
+    }
+
+    // Unlink staff member
+    async function unlinkStaffMember(employeeId) {
+      if (!confirm("Сбросить привязку пользователя к этой должности? Сотрудник сможет привязаться заново.")) {
+        return;
+      }
+      try {
+        const res = await fetch(`/api/facility/${appState.facilityCode}/staff/${employeeId}/unlink`, {
+          method: "POST"
+        });
+        if (res.ok) {
+          await loadOwnerDashboard();
+        }
+      } catch (e) {
+        alert("Ошибка сброса привязки");
+      }
+    }
+
+    // Add staff from dashboard
+    async function addStaffMemberFromDashboard() {
+      const nameInput = document.getElementById("dashNewStaffName");
+      const posSelect = document.getElementById("dashNewStaffPosition");
+      const name = nameInput.value.trim();
+      const pos = posSelect.value;
+
+      if (!name) {
+        alert("Введите фамилию и имя сотрудника");
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/facility/${appState.facilityCode}/staff`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ full_name: name, position: pos })
+        });
+        if (res.ok) {
+          nameInput.value = "";
+          await loadOwnerDashboard();
+        }
+      } catch (e) {}
+    }
+
+    // Employee flow: load roster
+    async function loadFacilityRosterForEmployee() {
+      const code = document.getElementById("empFacilityCode").value.trim();
+      if (!code) {
+        alert("Введите номер заведения");
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/facility/${code}`);
+        if (!res.ok) {
+          alert("Заведение с таким номером не найдено в реестре.");
+          return;
+        }
+
+        const data = await res.json();
+        appState.facilityCode = code;
+        document.getElementById("empFoundVenueName").textContent = data.name;
+        document.getElementById("empFoundVenueAddress").textContent = data.address || "Адрес не указан";
+
+        const select = document.getElementById("empRosterSelect");
+        select.innerHTML = "";
+
+        const staff = data.staff || [];
+        if (staff.length === 0) {
+          select.innerHTML = `<option value="">Список сотрудников пуст (обратитесь к руководителю)</option>`;
+        } else {
+          staff.forEach(s => {
+            const opt = document.createElement("option");
+            opt.value = s.id;
+            const statusText = s.user_id ? "зарегистрирован" : "свободен";
+            opt.textContent = `${s.full_name} — ${s.position} (${statusText})`;
+            select.appendChild(opt);
+          });
+        }
+
+        document.getElementById("empRosterSection").style.display = "block";
+      } catch (e) {
+        alert("Ошибка подключения к серверу.");
+      }
+    }
+
+    // Confirm roster claim
+    async function confirmEmployeeRosterClaim() {
+      const select = document.getElementById("empRosterSelect");
+      const empId = parseInt(select.value);
+
+      if (!empId) {
+        alert("Выберите вашу фамилию из списка сотрудников.");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/employee/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: appState.facilityCode,
+            employee_id: empId,
+            user_id: appState.user_id
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          appState.employee.name = data.full_name;
+          appState.employee.position = data.position;
+          appState.employee.facilityCode = appState.facilityCode;
+
+          localStorage.setItem("app_role", "employee");
+          localStorage.setItem("app_code", appState.facilityCode);
+          localStorage.setItem("app_emp_name", data.full_name);
+
+          const box = document.getElementById("empClaimStatusBox");
+          box.style.display = "block";
+          box.innerHTML = `
+            <strong>Профиль успешно привязан:</strong> ${data.full_name} (${data.position}).<br>
+            Сообщение с кнопкой подтверждения присутствия отправлено в чат с ботом.<br><br>
+            <button class="btn" onclick="closeWebAppAndReturnToBot()">Перейти в чат для выхода на смену</button>
+          `;
+          document.getElementById("empRosterSection").style.display = "none";
+        }
+      } catch (e) {
+        alert("Ошибка привязки профиля.");
+      }
+    }
+
+    // Render employee shift screen
+    function renderEmployeeShiftScreen() {
+      const emp = appState.employee;
+      const card = document.getElementById("empProfileCard");
+      card.innerHTML = `
+        <div class="item-card-title">${emp.name}</div>
+        <div class="item-card-meta">Должность: <strong>${emp.position}</strong></div>
+        <div class="item-card-meta">Номер заведения: <strong>${emp.facilityCode}</strong></div>
+      `;
+
+      const statusBox = document.getElementById("shiftStatusBox");
+      const tasksSection = document.getElementById("employeeTasksSection");
+
+      if (emp.shiftStarted) {
+        statusBox.className = "status-box success";
+        statusBox.textContent = `Присутствие на объекте подтверждено через платформу MAX. Смена открыта в ${emp.shiftStartTime || "08:00"}.`;
+        tasksSection.style.display = "block";
+        renderEmployeeTasks();
+      } else {
+        statusBox.className = "status-box error";
+        statusBox.innerHTML = `
+          Регистрация завершена. Смена еще не открыта.<br>
+          Для выхода на смену подтвердите геолокацию в диалоге с ботом.
+          <button class="btn" style="margin-top: 10px;" onclick="closeWebAppAndReturnToBot()">Перейти в чат для выхода на смену</button>
+        `;
+        tasksSection.style.display = "none";
+      }
+    }
+
+    // Render employee tasks
+    function renderEmployeeTasks() {
+      const cont = document.getElementById("employeeTasksList");
+      cont.innerHTML = "";
+
+      const myRole = appState.employee.position;
+      const myTasks = appState.duties.filter(d => d.assignedTo === myRole);
+
+      if (myTasks.length === 0) {
+        cont.innerHTML = "<p>На вашу должность нет назначенных обязательных требований.</p>";
+        return;
+      }
+
+      myTasks.forEach(task => {
+        const isDone = appState.employee.completedTasks.includes(task.id);
+        const photoUrl = appState.employee.taskPhotos[task.id];
+
+        const card = document.createElement("div");
+        card.className = "duty-card" + (isDone ? " done" : "");
+
+        let photoSection = `
+          <div class="photo-upload-row">
+            <label style="font-size:11px; color:#555555;">Фото подтверждение выполнения:</label>
+            <input type="file" accept="image/*" onchange="uploadTaskPhoto(${task.id}, this)">
+            ${photoUrl ? `<a href="${photoUrl}" target="_blank" class="photo-preview-link">Просмотреть прикрепленное фото</a>` : ""}
+          </div>
+        `;
+
+        card.innerHTML = `
+          <div class="duty-title">${task.question}</div>
+          <div class="duty-norm">Норма: ${task.norm} (Зона: ${task.zone})</div>
+          <div class="duty-fine">Предотвращенный штраф по ст. 6.6 КоАП РФ: ${task.fineText}</div>
+          <label class="duty-check-label">
+            <input type="checkbox" ${isDone ? "checked" : ""} onchange="toggleTaskDone(${task.id}, this.checked)">
+            ${isDone ? "Требование выполнено" : "Отметить выполнение"}
+          </label>
+          ${photoSection}
+        `;
+        cont.appendChild(card);
+      });
+    }
+
+    // Toggle task
+    async function toggleTaskDone(taskId, checked) {
+      if (!appState.employee.shiftStarted) {
+        alert("Смена не открыта. Отметка требований доступна только на объекте.");
+        return;
+      }
+
+      if (checked) {
+        if (!appState.employee.completedTasks.includes(taskId)) {
+          appState.employee.completedTasks.push(taskId);
+        }
+      } else {
+        appState.employee.completedTasks = appState.employee.completedTasks.filter(id => id !== taskId);
+      }
+      renderEmployeeTasks();
+
+      if (appState.user_id) {
+        try {
+          const res = await fetch(`/api/employee/${appState.user_id}/tasks`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              completed_task_ids: appState.employee.completedTasks,
+              task_photos: appState.employee.taskPhotos
+            })
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            alert(err.detail || "Ошибка сохранения задач");
+          }
+        } catch (e) {}
+      }
+    }
+
+    // Upload photo
+    async function uploadTaskPhoto(taskId, inputElem) {
+      if (!appState.employee.shiftStarted) {
+        alert("Смена не открыта. Прикрепление фото доступно только на объекте.");
+        return;
+      }
+
+      if (!inputElem.files || inputElem.files.length === 0) return;
+      const file = inputElem.files[0];
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData
+        });
+        if (res.ok) {
+          const data = await res.json();
+          appState.employee.taskPhotos[taskId] = data.url;
+
+          if (!appState.employee.completedTasks.includes(taskId)) {
+            appState.employee.completedTasks.push(taskId);
+          }
+          renderEmployeeTasks();
+
+          if (appState.user_id) {
+            await fetch(`/api/employee/${appState.user_id}/tasks`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                completed_task_ids: appState.employee.completedTasks,
+                task_photos: appState.employee.taskPhotos
+              })
+            });
+          }
+        }
+      } catch (e) {
+        alert("Ошибка загрузки фото");
+      }
+    }
+
+    // End employee shift
+    async function endEmployeeShiftFromWeb() {
+      if (!confirm("Завершить смену? Данные о выполненных требованиях будут сохранены в системе.")) {
+        return;
+      }
+      if (appState.user_id) {
+        try {
+          await fetch(`/api/employee/${appState.user_id}/shift/end`, { method: "POST" });
+        } catch (e) {}
+      }
+      closeWebAppAndReturnToBot();
+    }
+
+    // Init
+    window.addEventListener("DOMContentLoaded", async () => {
+      await loadChecklists();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      let role = urlParams.get("role") || localStorage.getItem("app_role");
+      let code = urlParams.get("code") || localStorage.getItem("app_code");
+      let userId = parseInt(urlParams.get("user_id")) || parseInt(localStorage.getItem("app_user_id")) || 0;
+      const mode = urlParams.get("mode");
+
+      appState.user_id = userId;
+      if (userId) localStorage.setItem("app_user_id", String(userId));
+
+      if (code) {
+        appState.facilityCode = code;
+        try {
+          const res = await fetch(`/api/facility/${code}`);
+          if (res.ok) {
+            const data = await res.json();
+            appState.venue.name = data.name;
+            appState.venue.address = data.address || "";
+            appState.venue.lat = data.geo_lat;
+            appState.venue.lon = data.geo_lon;
+            appState.venue.geoRequired = data.geo_required;
+            if (data.positions && data.positions.length > 0) {
+              appState.positions = data.positions;
+            }
+            if (data.duties && data.duties.length > 0) {
+              appState.duties = data.duties;
+            }
+            appState.backendStaff = data.staff || [];
+          }
+        } catch (e) {}
+      }
+
+      if (role === "owner") {
+        appState.role = "owner";
+        localStorage.setItem("app_role", "owner");
+        if (mode === "new" || !appState.venue.address) {
+          showScreen("screenOwnerStep1");
+        } else {
+          await loadOwnerDashboard();
+          showScreen("screenOwnerDashboard");
+        }
+      } else if (role === "employee") {
+        appState.role = "employee";
+        localStorage.setItem("app_role", "employee");
+        if (userId) {
+          try {
+            const empRes = await fetch(`/api/employee/${userId}`);
+            if (empRes.ok) {
+              const empData = await empRes.json();
+              appState.employee.name = empData.full_name;
+              appState.employee.position = empData.position;
+              appState.employee.facilityCode = empData.facility_code;
+              appState.employee.shiftStarted = Boolean(empData.shift_active);
+              appState.employee.shiftStartTime = empData.shift_started_at;
+              appState.employee.lastGeoDistance = empData.last_geo_distance;
+              appState.employee.completedTasks = empData.completed_tasks || [];
+              appState.employee.taskPhotos = empData.task_photos || {};
+            }
+          } catch (e) {}
+        }
+
+        if (appState.employee.name) {
+          renderEmployeeShiftScreen();
+          showScreen("screenEmployeeShift");
+        } else {
+          if (appState.facilityCode) {
+            document.getElementById("empFacilityCode").value = appState.facilityCode;
+            loadFacilityRosterForEmployee();
+          }
+          showScreen("screenEmployeeRegister");
+        }
+      } else {
+        showScreen("screenLanding");
+      }
+    });
+  </script>
+</body>
+</html>

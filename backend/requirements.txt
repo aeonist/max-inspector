@@ -1,0 +1,22 @@
+# Web server
+fastapi>=0.110.0,<1.0.0
+uvicorn[standard]>=0.29.0,<1.0.0
+
+# Data validation
+pydantic>=2.6.0,<3.0.0
+pydantic-settings>=2.2.0,<3.0.0
+python-dotenv>=1.0.0
+
+# Database
+sqlalchemy>=2.0.0,<3.0.0
+
+# Bot API
+maxapi>=1.2.0
+aiohttp>=3.9.0,<4.0.0
+
+# PDF generation
+reportlab>=4.1.0
+
+# File upload
+aiofiles>=23.2.0
+python-multipart>=0.0.9
