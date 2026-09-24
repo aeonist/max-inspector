@@ -8,8 +8,8 @@ from maxapi.filters.command import CommandStart
 from maxapi.types import MessageCallback, MessageCreated
 from maxapi.types.attachments.location import Location
 
-from bot.instance import dp
-from bot.keyboards import (
+from max_bot.instance import dp
+from max_bot.keyboards import (
     get_employee_active_shift_keyboard,
     get_employee_claim_keyboard,
     get_employee_tasks_link_keyboard,

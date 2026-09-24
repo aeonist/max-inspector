@@ -1,6 +1,6 @@
 import logging
-from bot.instance import bot
-from bot.keyboards import (
+from max_bot.instance import bot
+from max_bot.keyboards import (
     get_owner_dashboard_keyboard,
     get_request_geo_keyboard,
 )
