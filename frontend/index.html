@@ -117,10 +117,6 @@
       <label for="customDutyName">Формулировка требования:</label>
       <input type="text" id="customDutyName" placeholder="Протереть контактные поверхности обеденных столов">
     </div>
-    <div class="form-group">
-      <label for="customDutyFine">Размер штрафа при нарушении:</label>
-      <input type="text" id="customDutyFine" placeholder="10 000 – 30 000 руб.">
-    </div>
     <button type="button" class="btn btn-secondary" onclick="addCustomDuty()">Внести требование в перечень</button>
 
     <button class="btn" style="margin-top: 16px;" onclick="finishOwnerSetup(true)">Пройти самообследование объекта (СанПиН)</button>
@@ -152,7 +148,7 @@
         <div id="auditProgressBar" class="progress-bar-fill" style="width: 0%;"></div>
       </div>
       <div id="auditBannerText" class="audit-banner-desc">
-        Для исключения штрафов до 300 000 ₽ и снижения категории риска пройдите проверку всех обязательных пунктов СанПиН 2.3/2.4.3590-20.
+        Пройдите самообследование по обязательным пунктам СанПиН 2.3/2.4.3590-20 для подтверждения готовности объекта и формирования Декларации соответствия.
       </div>
       <div style="margin-top: 10px;">
         <button id="auditBannerBtn" class="btn btn-small" onclick="openOwnerAuditScreen()">Пройти самообследование</button>
@@ -172,8 +168,8 @@
           <div id="metricStaffCount" class="metric-value">0 из 0</div>
         </div>
         <div class="metric-card">
-          <div class="metric-title">Предотвращено штрафов</div>
-          <div id="metricFinesSaved" class="metric-value">0 руб.</div>
+          <div class="metric-title">Выполнено требований</div>
+          <div id="metricTasksProgress" class="metric-value">0 из 0</div>
         </div>
       </div>
 
@@ -226,6 +222,20 @@
         <div class="item-card-meta">Сформированная декларация направляется в контрольный орган и освобождает объект от плановых проверок на срок до 3 лет.</div>
         <div class="item-card-meta" style="margin-top: 6px;">Уровень соответствия СанПиН: <strong>100%</strong></div>
         <a href="https://www.consultant.ru/document/cons_doc_LAW_358890/578f4477c77c1d76378415d86ef8e3648e42994c/" target="_blank" class="btn btn-secondary btn-small" style="text-decoration:none; margin-top:8px;">Открыть текст статьи 51 248-ФЗ</a>
+      </div>
+
+      <h2 style="margin-top: 18px;">Нормативная база и ответственность</h2>
+      <div class="item-card">
+        <div class="item-card-title">Меры административной ответственности (КоАП РФ)</div>
+        <div class="item-card-meta" style="margin-top: 8px;">
+          <strong>Статья 6.6 КоАП РФ:</strong> Нарушение санитарно-эпидемиологических требований к организации питания населения влечет наложение административного штрафа на должностных лиц от 5 000 до 10 000 руб., на юридических лиц — от 30 000 до 50 000 руб. или административное приостановление деятельности на срок до 90 суток.
+        </div>
+        <div class="item-card-meta" style="margin-top: 8px;">
+          <strong>Статья 14.43 КоАП РФ:</strong> Нарушение требований технических регламентов ТР ТС 021/2011 "О безопасности пищевой продукции" влечет штраф на юридических лиц от 100 000 до 300 000 руб.
+        </div>
+        <div class="item-card-meta" style="margin-top: 8px;">
+          <strong>Статья 51 Федерального закона № 248-ФЗ:</strong> Контролируемые лица могут проводить самостоятельную оценку соблюдения обязательных требований (самообследование). Успешно принятая декларация снижает категорию риска заведения и освобождает от плановых контрольных мероприятий.
+        </div>
       </div>
 
       <div style="margin-top: 16px;">
@@ -331,11 +341,12 @@
 
     <div id="employeeTasksSection" style="display:none; margin-top: 16px;">
       <h2>Обязательные требования на смену</h2>
-      <p>Отметьте выполненные требования для исключения штрафов при надзорной проверке:</p>
+      <p>Отметьте выполненные санитарные требования на текущую смену:</p>
       <div id="employeeTasksList"></div>
 
-      <div style="margin-top: 20px;">
+      <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px;">
         <button class="btn btn-secondary" onclick="endEmployeeShiftFromWeb()">Завершить смену</button>
+        <button class="btn btn-secondary" onclick="closeWebAppAndReturnToBot()">Вернуться в чат с ботом</button>
       </div>
     </div>
   </div>

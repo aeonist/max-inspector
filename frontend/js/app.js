@@ -29,12 +29,30 @@ function navigateBack() {
 
 // Close WebApp and return to chat bot
 function closeWebAppAndReturnToBot() {
-  if (window.WebApp && window.WebApp.close) {
-    window.WebApp.close();
-  } else {
-    window.location.href = "https://max.ru/t658_hakaton_max_bot";
+  // 1. Try closing via native MAX WebApp SDK
+  try {
+    if (window.WebApp && typeof window.WebApp.close === "function") {
+      window.WebApp.close();
+    }
+  } catch (e) {
+    console.warn("WebApp.close error:", e);
   }
+
+  // 2. Try window.close() if opened as a popup or separate window
+  try {
+    window.close();
+  } catch (e) {}
+
+  // 3. Fallback redirect: if window is still open after 80ms (e.g. desktop browser, iframe)
+  setTimeout(() => {
+    try {
+      window.location.href = "https://max.ru/t658_hakaton_max_bot";
+    } catch (e) {
+      window.open("https://max.ru/t658_hakaton_max_bot", "_self");
+    }
+  }, 80);
 }
+
 
 // Handle landing code submit
 function handleLandingCodeSubmit() {

@@ -126,7 +126,7 @@ function renderEmployeeTasks() {
       card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
           <span class="defect-badge violation">Зафиксировано нарушение</span>
-          <span style="font-size: 11px; color: #880000; font-weight: 600;">Штраф: ${task.fineText}</span>
+          <span style="font-size: 11px; color: #666666; font-weight: 500;">СанПиН 2.3/2.4.3590-20</span>
         </div>
         <div class="duty-title">${task.question}</div>
         <div class="duty-norm">Норма: ${task.norm} (Зона: ${task.zone})</div>
@@ -192,7 +192,7 @@ function renderEmployeeTasks() {
       card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
           <span class="defect-badge compliant">Контроль СанПиН</span>
-          <span style="font-size: 11px; color: #880000; font-weight: 600;">Штраф: ${task.fineText}</span>
+          <span style="font-size: 11px; color: #666666; font-weight: 500;">Зона: ${task.zone}</span>
         </div>
         <div class="duty-title">${task.question}</div>
         <div class="duty-norm">Норма: ${task.norm} (Зона: ${task.zone})</div>
@@ -290,8 +290,7 @@ function shareEmployeeTaskDefect(taskId) {
     "Требование: " + task.question + "\n\n" +
     "Суть дефекта: " + task.violation + "\n\n" +
     "Инструкция по устранению:\n" + task.remediation + "\n\n" +
-    "Ответственный: " + (task.assignedTo || appState.employee.position) + "\n" +
-    "Риск штрафа: " + task.fineText;
+    "Ответственный: " + (task.assignedTo || appState.employee.position);
 
   if (navigator.share) {
     navigator.share({

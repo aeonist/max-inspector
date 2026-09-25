@@ -14,9 +14,9 @@ const appState = {
     staffCount: 3
   },
   positions: [
-    { name: "Повар", count: 1 },
-    { name: "Официант", count: 1 },
-    { name: "Уборщик", count: 1 }
+    { name: "Повар" },
+    { name: "Официант" },
+    { name: "Уборщик" }
   ],
   staffList: [
     { full_name: "Иванов Алексей", position: "Повар" },

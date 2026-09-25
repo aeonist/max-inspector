@@ -97,22 +97,30 @@ function saveOwnerStep1(skip) {
 function renderPositionsList() {
   const cont = document.getElementById("positionsList");
   cont.innerHTML = "";
+  if (appState.positions.length === 0) {
+    cont.innerHTML = "<p style='font-size:12px; color:#777777;'>Должности еще не добавлены.</p>";
+    return;
+  }
   appState.positions.forEach((pos, idx) => {
     const row = document.createElement("div");
     row.className = "position-row";
+    const posName = typeof pos === "string" ? pos : pos.name;
     row.innerHTML = `
-      <span>${pos.name}</span>
-      <div>
-        <label style="display:inline; margin-right:6px; font-size:12px;">штат:</label>
-        <input type="number" min="0" value="${pos.count}" onchange="updatePositionCount(${idx}, this.value)">
-      </div>
+      <span><strong>${posName}</strong></span>
+      <button type="button" class="btn-back" style="padding:2px 8px; font-size:11px;" onclick="removePosition(${idx})">Удалить</button>
     `;
     cont.appendChild(row);
   });
 }
 
-function updatePositionCount(idx, val) {
-  appState.positions[idx].count = parseInt(val) || 0;
+function removePosition(idx) {
+  if (appState.positions.length <= 1) {
+    alert("В перечне должна оставаться хотя бы одна должность");
+    return;
+  }
+  appState.positions.splice(idx, 1);
+  renderPositionsList();
+  populateSetupPositionSelect();
 }
 
 // Add new job title
@@ -120,7 +128,7 @@ function addNewPosition() {
   const input = document.getElementById("newPositionName");
   const name = input.value.trim();
   if (!name) return;
-  appState.positions.push({ name: name, count: 1 });
+  appState.positions.push({ name: name });
   input.value = "";
   renderPositionsList();
   populateSetupPositionSelect();
@@ -193,18 +201,20 @@ function renderDutiesAssignment() {
 
     let selectOptions = `<option value="Не назначено">Не назначено</option>`;
     appState.positions.forEach(p => {
-      const selected = (duty.assignedTo === p.name) ? "selected" : "";
-      selectOptions += `<option value="${p.name}" ${selected}>${p.name}</option>`;
+      const pName = typeof p === "string" ? p : p.name;
+      const selected = (duty.assignedTo === pName) ? "selected" : "";
+      selectOptions += `<option value="${pName}" ${selected}>${pName}</option>`;
     });
 
     card.innerHTML = `
       <div class="item-card-title">${duty.question}</div>
-      <div class="item-card-meta">${duty.norm} (Зона: ${duty.zone})</div>
-      <div class="item-card-fine">Штраф юридического лица: ${duty.fineText}</div>
-      <label style="font-size:12px;">Ответственная должность:</label>
-      <select onchange="appState.duties[${idx}].assignedTo = this.value">
-        ${selectOptions}
-      </select>
+      <div class="item-card-meta">${duty.norm} &bull; Зона: ${duty.zone}</div>
+      <div style="margin-top: 6px;">
+        <label style="font-size:12px; color: #555555;">Ответственная должность:</label>
+        <select style="margin-top: 3px;" onchange="appState.duties[${idx}].assignedTo = this.value">
+          ${selectOptions}
+        </select>
+      </div>
     `;
     cont.appendChild(card);
   });
@@ -212,21 +222,21 @@ function renderDutiesAssignment() {
 
 function addCustomDuty() {
   const name = document.getElementById("customDutyName").value.trim();
-  const fine = document.getElementById("customDutyFine").value.trim() || "10 000 – 30 000 руб.";
   if (!name) return;
+
+  const defaultPos = appState.positions[0]
+    ? (typeof appState.positions[0] === "string" ? appState.positions[0] : appState.positions[0].name)
+    : "Не назначено";
 
   appState.duties.push({
     id: appState.duties.length + 1,
     zone: "Внутренний распорядок",
     question: name,
     norm: "Регламент предприятия",
-    fineText: fine,
-    fineAmount: 20000,
-    assignedTo: appState.positions[0] ? appState.positions[0].name : "Не назначено"
+    assignedTo: defaultPos
   });
 
   document.getElementById("customDutyName").value = "";
-  document.getElementById("customDutyFine").value = "";
   renderDutiesAssignment();
 }
 
@@ -340,7 +350,7 @@ function renderAuditReminderBanner() {
   } else {
     banner.classList.remove("completed");
     if (titleElem) titleElem.textContent = "Самообследование объекта не завершено";
-    if (textElem) textElem.textContent = "Для исключения штрафов до 300 000 ₽ и снижения категории риска пройдите проверку всех обязательных пунктов СанПиН 2.3/2.4.3590-20.";
+    if (textElem) textElem.textContent = "Пройдите самообследование по обязательным пунктам СанПиН 2.3/2.4.3590-20 для подтверждения готовности объекта и формирования Декларации соответствия.";
     if (btnElem) btnElem.textContent = (answeredCount === 0) ? "Пройти самообследование" : "Продолжить самообследование";
   }
 }
@@ -451,7 +461,7 @@ function renderOwnerAuditList() {
     card.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
         <span style="font-size:11px; font-weight:700; color:#555555; text-transform:uppercase;">${duty.section || duty.zone} &bull; Пункт №${duty.id}</span>
-        <span style="font-size:11px; color:#880000; font-weight:600;">Штраф: ${duty.fineText}</span>
+        <span style="font-size:11px; color:#666666; font-weight:500;">СанПиН 2.3/2.4.3590-20</span>
       </div>
       <div class="item-card-title">${duty.question}</div>
       <div class="item-card-meta">${duty.norm}</div>
@@ -530,8 +540,7 @@ function shareDefectToChat(dutyId) {
     "Норма: " + duty.norm + "\n\n" +
     "Выявленный дефект: " + duty.violation + "\n\n" +
     "Регламент исправления:\n" + duty.remediation + "\n\n" +
-    "Ответственная роль: " + (duty.assignedTo || duty.default_role || "Сотрудник") + "\n" +
-    "Риск штрафа: " + duty.fineText;
+    "Ответственная роль: " + (duty.assignedTo || duty.default_role || "Сотрудник");
 
   if (navigator.share) {
     navigator.share({
@@ -570,19 +579,23 @@ function renderDashboardShiftTab() {
   const activeStaff = staff.filter(s => s.shift_active);
 
   let totalTasksDone = 0;
-  let totalFinesSaved = 0;
+  let totalTasksAssigned = 0;
 
   activeStaff.forEach(s => {
     const doneTasks = s.completed_tasks || [];
     totalTasksDone += doneTasks.length;
-    doneTasks.forEach(tId => {
-      const duty = appState.duties.find(d => d.id === tId);
-      totalFinesSaved += duty ? duty.fineAmount : 30000;
-    });
+    const staffTasks = appState.duties.filter(d => d.assignedTo === s.position);
+    totalTasksAssigned += staffTasks.length;
   });
 
-  document.getElementById("metricStaffCount").textContent = `${activeStaff.length} из ${staff.length}`;
-  document.getElementById("metricFinesSaved").textContent = `${totalFinesSaved.toLocaleString("ru-RU")} руб.`;
+  const staffMetric = document.getElementById("metricStaffCount");
+  if (staffMetric) staffMetric.textContent = `${activeStaff.length} из ${staff.length}`;
+
+  const tasksMetric = document.getElementById("metricTasksProgress");
+  if (tasksMetric) {
+    const totalTarget = totalTasksAssigned > 0 ? totalTasksAssigned : (appState.duties.length || 40);
+    tasksMetric.textContent = `${totalTasksDone} из ${totalTarget}`;
+  }
 
   const listCont = document.getElementById("activeStaffList");
   listCont.innerHTML = "";
