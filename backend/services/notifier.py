@@ -46,3 +46,44 @@ async def notify_employee_registered(
         )
     except Exception as e:
         logger.error(f"Failed to notify employee {user_id}: {e}")
+
+
+# Notify employees of a facility about detected defect and remediation steps
+async def notify_employees_defect(
+    db,
+    facility_id: int,
+    facility_name: str,
+    duty_title: str,
+    violation: str,
+    remediation: str,
+    assigned_role: str,
+    reporter_name: str = "Руководитель / Инспектор",
+):
+    try:
+        from models import Employee
+        employees = (
+            db.query(Employee)
+            .filter(Employee.facility_id == facility_id, Employee.user_id.isnot(None))
+            .all()
+        )
+        if not employees:
+            logger.info(f"No linked employees found to notify for facility {facility_id}")
+            return
+
+        msg_text = (
+            f"Внимание! Зафиксировано нарушение на объекте {facility_name}.\n\n"
+            f"Требование: {duty_title}\n"
+            f"Выявленный дефект: {violation}\n"
+            f"Ответственная роль: {assigned_role}\n\n"
+            f"Инструкция по устранению (регламент):\n{remediation}\n\n"
+            f"Зафиксировал: {reporter_name}\n"
+            "После устранения дефекта прикрепите фотоподтверждение в веб-приложении."
+        )
+        for emp in employees:
+            try:
+                await bot.send_message(user_id=emp.user_id, text=msg_text)
+            except Exception as ex:
+                logger.warning(f"Could not send defect notice to emp {emp.id}: {ex}")
+    except Exception as e:
+        logger.error(f"Failed to notify employees of defect: {e}")
+

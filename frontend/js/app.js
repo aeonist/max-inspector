@@ -62,6 +62,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   appState.user_id = userId;
   if (userId) localStorage.setItem("app_user_id", String(userId));
 
+  let facilityLoaded = false;
   if (code) {
     appState.facilityCode = code;
     try {
@@ -77,9 +78,23 @@ window.addEventListener("DOMContentLoaded", async () => {
       if (data.duties && data.duties.length > 0) {
         appState.duties = data.duties;
       }
+      if (data.audit_answers) {
+        appState.auditAnswers = data.audit_answers;
+      }
+      if (typeof data.audit_progress === "number") {
+        appState.auditProgress = data.audit_progress;
+      }
       appState.backendStaff = data.staff || [];
+      facilityLoaded = true;
     } catch (e) {
-      console.error("Failed to load facility on boot:", e);
+      console.warn("Facility not found, clearing stale storage:", e);
+      if (mode !== "new") {
+        code = null;
+        role = null;
+        appState.facilityCode = "";
+        localStorage.removeItem("app_code");
+        localStorage.removeItem("app_role");
+      }
     }
   }
 

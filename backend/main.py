@@ -8,15 +8,15 @@ from fastapi.staticfiles import StaticFiles
 
 from api import api_router
 from config import FRONTEND_DIR, UPLOADS_DIR
-from database import Base, engine
+from database import init_db
 from max_bot import bot, dp
 
 # Setup basic logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create database tables if needed
-Base.metadata.create_all(bind=engine)
+# Initialize database tables and migrate columns
+init_db()
 
 
 # Application lifespan context

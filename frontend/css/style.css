@@ -368,3 +368,233 @@ select {
   text-decoration: underline;
   font-size: 12px;
 }
+
+/* Owner Audit Banner & Reminders */
+.audit-banner {
+  border: 1px solid #d0d0d0;
+  border-left: 4px solid #b06000;
+  background: #fdfdfd;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.audit-banner.completed {
+  border-left-color: #137333;
+  background: #f8fbf8;
+}
+
+.audit-banner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.audit-banner-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111111;
+}
+
+.audit-banner-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  background: #fef7e0;
+  color: #b06000;
+  border-radius: 2px;
+}
+
+.audit-banner.completed .audit-banner-badge {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.audit-banner-text {
+  font-size: 12px;
+  color: #555555;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.progress-bar-container {
+  width: 100%;
+  background: #e8e8e8;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 6px 0 10px 0;
+}
+
+.progress-bar-fill {
+  background: #111111;
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.audit-banner.completed .progress-bar-fill {
+  background: #137333;
+}
+
+.audit-banner-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Section Filter Bar */
+.section-filter-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.section-pill {
+  padding: 6px 12px;
+  border: 1px solid #cccccc;
+  background: #ffffff;
+  color: #333333;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 0;
+}
+
+.section-pill.active {
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
+}
+
+/* Audit Cards */
+.audit-card {
+  border: 1px solid #dcdcdc;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #ffffff;
+}
+
+.audit-card.status-compliant {
+  border-left: 4px solid #137333;
+  background: #fbfdfb;
+}
+
+.audit-card.status-violation {
+  border-left: 4px solid #c5221f;
+  background: #fffafa;
+}
+
+.audit-card.status-na {
+  border-left: 4px solid #777777;
+  background: #fafafa;
+}
+
+.audit-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.btn-choice {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid #cccccc;
+  background: #f7f7f7;
+  color: #333333;
+  cursor: pointer;
+}
+
+.btn-choice.active-compliant {
+  background: #137333;
+  color: #ffffff;
+  border-color: #137333;
+}
+
+.btn-choice.active-violation {
+  background: #c5221f;
+  color: #ffffff;
+  border-color: #c5221f;
+}
+
+.btn-choice.active-na {
+  background: #555555;
+  color: #ffffff;
+  border-color: #555555;
+}
+
+.violation-detail-box {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #fdf2f2;
+  border: 1px solid #fad2cf;
+  font-size: 12px;
+  color: #880000;
+  line-height: 1.35;
+}
+
+.remediation-box {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: #f0f8f0;
+  border: 1px solid #ceead6;
+  font-size: 12px;
+  color: #137333;
+  line-height: 1.35;
+}
+
+/* Employee Remediation Styles */
+.duty-card.has-defect {
+  border-left: 4px solid #c5221f;
+  background: #fffafa;
+}
+
+.duty-card.resolved {
+  border-left: 4px solid #137333;
+  background: #fbfdfb;
+}
+
+.defect-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  margin-bottom: 4px;
+}
+
+.defect-badge.violation {
+  background: #fad2cf;
+  color: #c5221f;
+}
+
+.defect-badge.resolved {
+  background: #ceead6;
+  color: #137333;
+}
+
+.defect-badge.compliant {
+  background: #e8f0fe;
+  color: #1a73e8;
+}
+
+.btn-defect-toggle {
+  background: none;
+  border: none;
+  color: #c5221f;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 6px;
+}
+
+

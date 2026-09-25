@@ -123,7 +123,8 @@
     </div>
     <button type="button" class="btn btn-secondary" onclick="addCustomDuty()">Внести требование в перечень</button>
 
-    <button class="btn" style="margin-top: 16px;" onclick="finishOwnerSetup()">Завершить настройку и открыть панель управления</button>
+    <button class="btn" style="margin-top: 16px;" onclick="finishOwnerSetup(true)">Пройти самообследование объекта (СанПиН)</button>
+    <button class="btn btn-secondary" style="margin-top: 8px;" onclick="finishOwnerSetup(false)">Завершить настройку (пройти позже)</button>
   </div>
 
   <!-- Owner Dashboard screen -->
@@ -136,6 +137,26 @@
         </div>
       </div>
       <button class="btn-back" onclick="refreshDashboardData()">Обновить</button>
+    </div>
+
+    <!-- Audit Reminder Banner -->
+    <div id="ownerAuditBanner" class="audit-banner">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+        <div>
+          <div id="auditBannerTitle" class="audit-banner-title">Самообследование объекта не завершено</div>
+          <div id="auditBannerCount" class="audit-banner-count">Проверено: 0 из 40 пунктов</div>
+        </div>
+        <span id="auditBannerBadge" class="audit-banner-badge">0% пройдено</span>
+      </div>
+      <div class="progress-bar-container">
+        <div id="auditProgressBar" class="progress-bar-fill" style="width: 0%;"></div>
+      </div>
+      <div id="auditBannerText" class="audit-banner-desc">
+        Для исключения штрафов до 300 000 ₽ и снижения категории риска пройдите проверку всех обязательных пунктов СанПиН 2.3/2.4.3590-20.
+      </div>
+      <div style="margin-top: 10px;">
+        <button id="auditBannerBtn" class="btn btn-small" onclick="openOwnerAuditScreen()">Пройти самообследование</button>
+      </div>
     </div>
 
     <div class="tabs">
@@ -211,6 +232,37 @@
         <button class="btn" onclick="showScreen('screenOwnerStep1')">Редактировать параметры заведения</button>
         <button class="btn btn-secondary" onclick="closeWebAppAndReturnToBot()">Вернуться в чат с ботом</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Owner Audit Screen -->
+  <div id="screenOwnerAudit" class="screen">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <h1>Самообследование объекта</h1>
+      <button class="btn-back" onclick="finishAuditAndReturn()">Назад в кабинет</button>
+    </div>
+    <p style="font-size: 13px; color: #555555; margin-bottom: 12px;">
+      Проверка соответствия СанПиН 2.3/2.4.3590-20 и ст. 51 Федерального закона № 248-ФЗ.
+    </p>
+
+    <div class="item-card" style="margin-bottom: 14px; background: #ffffff;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <span id="auditScreenCountText" style="font-size: 13px; font-weight: 600; color: #333333;">Проверено: 0 из 40 пунктов</span>
+        <span id="auditScreenPercentText" style="font-size: 13px; font-weight: 700; color: #0077ff;">0%</span>
+      </div>
+      <div class="progress-bar-container">
+        <div id="auditScreenProgressBar" class="progress-bar-fill" style="width: 0%;"></div>
+      </div>
+    </div>
+
+    <!-- Section Filter Pills -->
+    <div id="auditSectionFilterBar" class="section-filter-bar"></div>
+
+    <!-- Questions list -->
+    <div id="ownerAuditQuestionsList"></div>
+
+    <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 8px;">
+      <button class="btn" onclick="finishAuditAndReturn()">Сохранить и вернуться в кабинет</button>
     </div>
   </div>
 

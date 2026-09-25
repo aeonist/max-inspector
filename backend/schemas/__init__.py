@@ -1,5 +1,7 @@
 from schemas.facility import (
     AddStaffRequest,
+    DefectNotifyRequest,
+    FacilityAuditRequest,
     FacilityAuthRequest,
     FacilityUpdateRequest,
     StaffItem,
@@ -15,7 +17,10 @@ __all__ = [
     "FacilityUpdateRequest",
     "FacilityAuthRequest",
     "AddStaffRequest",
+    "FacilityAuditRequest",
+    "DefectNotifyRequest",
     "EmployeeRegisterRequest",
     "EmployeeClaimRequest",
     "EmployeeTasksRequest",
 ]
+

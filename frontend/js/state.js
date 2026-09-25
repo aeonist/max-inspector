@@ -25,6 +25,10 @@ const appState = {
   ],
   backendStaff: [],
   duties: [],
+  auditAnswers: {},
+  auditProgress: 0,
+  currentAuditSection: "all",
+  employeeDefects: {},
   employee: {
     id: 0,
     facilityCode: "",
@@ -41,7 +45,7 @@ const appState = {
 // Default role assignment helper
 function getDefaultRoleForZone(zone) {
   if (zone === "Кухня" || zone === "Холодильники" || zone === "Склад") return "Повар";
-  if (zone === "Мойка") return "Уборщик";
+  if (zone === "Мойка" || zone === "Отходы") return "Уборщик";
   return "Официант";
 }
 
@@ -57,23 +61,20 @@ async function loadChecklists() {
         if (m) fineNum = parseInt(m[1]) * 1000;
       }
       return {
-        id: idx + 1,
+        id: item.id || (idx + 1),
+        section: item.section || item.zone,
         zone: item.zone,
         question: item.question,
         norm: item.norm,
-        violation: item.violation,
-        article: item.article,
+        violation: item.violation || "Несоблюдение санитарных требований",
+        remediation: item.remediation || "Привести объект в соответствие с нормативом СанПиН.",
+        article: item.article || "Ст. 6.6 КоАП РФ",
         fineText: item.fines ? item.fines.legal_entity : "30 000 – 50 000 ₽",
         fineAmount: fineNum,
-        assignedTo: getDefaultRoleForZone(item.zone)
+        assignedTo: item.default_role || getDefaultRoleForZone(item.zone)
       };
     });
   } catch (e) {
-    appState.duties = [
-      { id: 1, zone: "Склад", question: "Ведется ли ежедневная регистрация температуры и влажности в помещениях хранения?", norm: "п. 3.8 СанПиН 2.3/2.4.3590-20", fineText: "30 000 – 50 000 ₽", fineAmount: 30000, assignedTo: "Повар" },
-      { id: 2, zone: "Кухня", question: "Обеспечена ли раздельная маркировка разделочного инвентаря для сырой и готовой продукции?", norm: "п. 3.6 СанПиН 2.3/2.4.3590-20", fineText: "30 000 – 50 000 ₽", fineAmount: 30000, assignedTo: "Повар" },
-      { id: 3, zone: "Мойка", question: "Соблюдается ли инструкция по приготовлению и концентрации дезинфицирующих растворов?", norm: "п. 4.5 СанПиН 2.3/2.4.3590-20", fineText: "30 000 – 50 000 ₽", fineAmount: 30000, assignedTo: "Уборщик" },
-      { id: 4, zone: "Персонал", question: "Наличие личных медицинских книжек с отметками о прохождении медосмотра?", norm: "п. 13.1 СанПиН 2.3/2.4.3590-20", fineText: "50 000 – 100 000 ₽", fineAmount: 50000, assignedTo: "Официант" }
-    ];
+    console.error("Failed to load checklists:", e);
   }
 }

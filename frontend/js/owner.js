@@ -230,8 +230,8 @@ function addCustomDuty() {
   renderDutiesAssignment();
 }
 
-// Finish owner setup -> Save to DB and open dashboard
-async function finishOwnerSetup() {
+// Finish owner setup -> Save to DB and open dashboard or audit
+async function finishOwnerSetup(openAuditNow = false) {
   try {
     await apiUpdateFacility(appState.facilityCode, {
       name: appState.venue.name,
@@ -256,7 +256,11 @@ async function finishOwnerSetup() {
   }
 
   await loadOwnerDashboard();
-  showScreen("screenOwnerDashboard");
+  if (openAuditNow) {
+    openOwnerAuditScreen();
+  } else {
+    showScreen("screenOwnerDashboard");
+  }
 }
 
 // Switch dashboard tabs
@@ -294,12 +298,266 @@ async function loadOwnerDashboard() {
     appState.venue.geoRequired = data.geo_required;
     appState.positions = data.positions || appState.positions;
     appState.duties = data.duties || appState.duties;
+    if (data.audit_answers) appState.auditAnswers = data.audit_answers;
+    if (typeof data.audit_progress === "number") appState.auditProgress = data.audit_progress;
   } catch (e) {
     console.error("Failed to load dashboard:", e);
   }
 
+  renderAuditReminderBanner();
   renderDashboardShiftTab();
   renderDashboardManagementTab();
+}
+
+// Render audit reminder banner with progress bar
+function renderAuditReminderBanner() {
+  const banner = document.getElementById("ownerAuditBanner");
+  if (!banner) return;
+
+  const total = (appState.duties && appState.duties.length > 0) ? appState.duties.length : 40;
+  const answers = appState.auditAnswers || {};
+  const answeredCount = Object.keys(answers).filter(k => answers[k]).length;
+  const pct = Math.min(100, Math.round((answeredCount / total) * 100));
+  appState.auditProgress = pct;
+
+  const titleElem = document.getElementById("auditBannerTitle");
+  const badgeElem = document.getElementById("auditBannerBadge");
+  const textElem = document.getElementById("auditBannerText");
+  const fillElem = document.getElementById("auditProgressBar");
+  const countElem = document.getElementById("auditBannerCount");
+  const btnElem = document.getElementById("auditBannerBtn");
+
+  if (fillElem) fillElem.style.width = pct + "%";
+  if (badgeElem) badgeElem.textContent = pct + "% пройдено";
+  if (countElem) countElem.textContent = `Проверено: ${answeredCount} из ${total} пунктов`;
+
+  if (pct >= 100) {
+    banner.classList.add("completed");
+    if (titleElem) titleElem.textContent = "Самообследование объекта пройдено на 100%";
+    if (badgeElem) badgeElem.textContent = "100% готовность";
+    if (textElem) textElem.textContent = "Все 40 обязательных санитарных требований СанПиН 2.3/2.4.3590-20 проверены. Объект готов к надзорным проверкам и формированию Декларации (ст. 51 248-ФЗ).";
+    if (btnElem) btnElem.textContent = "Просмотреть аудит";
+  } else {
+    banner.classList.remove("completed");
+    if (titleElem) titleElem.textContent = "Самообследование объекта не завершено";
+    if (textElem) textElem.textContent = "Для исключения штрафов до 300 000 ₽ и снижения категории риска пройдите проверку всех обязательных пунктов СанПиН 2.3/2.4.3590-20.";
+    if (btnElem) btnElem.textContent = (answeredCount === 0) ? "Пройти самообследование" : "Продолжить самообследование";
+  }
+}
+
+// Open owner audit screen
+function openOwnerAuditScreen() {
+  renderOwnerAuditList();
+  showScreen("screenOwnerAudit");
+}
+
+// Render section filter pills and question cards
+function renderOwnerAuditList() {
+  const duties = appState.duties || [];
+  const answers = appState.auditAnswers || {};
+
+  // Extract unique sections
+  const sectionsMap = {};
+  duties.forEach(d => {
+    const sec = d.section || d.zone || "Общие нормы";
+    if (!sectionsMap[sec]) {
+      sectionsMap[sec] = { total: 0, answered: 0 };
+    }
+    sectionsMap[sec].total++;
+    if (answers[d.id]) {
+      sectionsMap[sec].answered++;
+    }
+  });
+
+  // Render filter pills
+  const filterCont = document.getElementById("auditSectionFilterBar");
+  if (filterCont) {
+    filterCont.innerHTML = "";
+    const allTotal = duties.length;
+    const allAnswered = Object.keys(answers).filter(k => answers[k]).length;
+
+    const allPill = document.createElement("button");
+    allPill.type = "button";
+    allPill.className = "section-pill" + (appState.currentAuditSection === "all" ? " active" : "");
+    allPill.textContent = `Все разделы (${allAnswered}/${allTotal})`;
+    allPill.onclick = () => setAuditSectionFilter("all");
+    filterCont.appendChild(allPill);
+
+    Object.keys(sectionsMap).forEach(secName => {
+      const stats = sectionsMap[secName];
+      const pill = document.createElement("button");
+      pill.type = "button";
+      pill.className = "section-pill" + (appState.currentAuditSection === secName ? " active" : "");
+      pill.textContent = `${secName} (${stats.answered}/${stats.total})`;
+      pill.onclick = () => setAuditSectionFilter(secName);
+      filterCont.appendChild(pill);
+    });
+  }
+
+  // Update top progress on screen
+  const total = duties.length || 40;
+  const answeredCount = Object.keys(answers).filter(k => answers[k]).length;
+  const pct = Math.min(100, Math.round((answeredCount / total) * 100));
+
+  const screenBar = document.getElementById("auditScreenProgressBar");
+  if (screenBar) screenBar.style.width = pct + "%";
+  const countText = document.getElementById("auditScreenCountText");
+  if (countText) countText.textContent = `Проверено: ${answeredCount} из ${total} пунктов`;
+  const pctText = document.getElementById("auditScreenPercentText");
+  if (pctText) pctText.textContent = pct + "%";
+
+  // Filter duties
+  let filteredDuties = duties;
+  if (appState.currentAuditSection && appState.currentAuditSection !== "all") {
+    filteredDuties = duties.filter(d => (d.section || d.zone) === appState.currentAuditSection);
+  }
+
+  const listCont = document.getElementById("ownerAuditQuestionsList");
+  if (!listCont) return;
+  listCont.innerHTML = "";
+
+  if (filteredDuties.length === 0) {
+    listCont.innerHTML = "<p style='font-size:13px; color:#777777;'>В данном разделе нет пунктов.</p>";
+    return;
+  }
+
+  filteredDuties.forEach((duty) => {
+    const card = document.createElement("div");
+    const currentAns = answers[duty.id] || "";
+    let statusClass = "";
+    if (currentAns === "compliant") statusClass = " status-compliant";
+    else if (currentAns === "violation") statusClass = " status-violation";
+    else if (currentAns === "na") statusClass = " status-na";
+
+    card.className = "audit-card" + statusClass;
+
+    let violationBlock = "";
+    if (currentAns === "violation") {
+      violationBlock = `
+        <div class="violation-detail-box">
+          <div style="color: #990000; font-weight: 700; margin-bottom: 4px;">Выявлено нарушение:</div>
+          <div>${duty.violation}</div>
+          <div class="remediation-box">
+            <strong>Регламент исправления:</strong> ${duty.remediation}
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-small" style="background:#0077ff; color:#ffffff;" onclick="notifyDefectToEmployees(${duty.id})">Оповестить сотрудников в MAX</button>
+            <button type="button" class="btn btn-small btn-secondary" onclick="shareDefectToChat(${duty.id})">Поделиться в чат смены</button>
+          </div>
+        </div>
+      `;
+    }
+
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+        <span style="font-size:11px; font-weight:700; color:#555555; text-transform:uppercase;">${duty.section || duty.zone} &bull; Пункт №${duty.id}</span>
+        <span style="font-size:11px; color:#880000; font-weight:600;">Штраф: ${duty.fineText}</span>
+      </div>
+      <div class="item-card-title">${duty.question}</div>
+      <div class="item-card-meta">${duty.norm}</div>
+
+      ${violationBlock}
+
+      <div class="audit-actions">
+        <button type="button" class="btn-choice ${currentAns === 'compliant' ? 'active-compliant' : ''}" onclick="setAuditAnswer(${duty.id}, 'compliant')">
+          Соблюдается (норма)
+        </button>
+        <button type="button" class="btn-choice ${currentAns === 'violation' ? 'active-violation' : ''}" onclick="setAuditAnswer(${duty.id}, 'violation')">
+          Нарушение (дефект)
+        </button>
+        <button type="button" class="btn-choice ${currentAns === 'na' ? 'active-na' : ''}" onclick="setAuditAnswer(${duty.id}, 'na')">
+          Не применимо
+        </button>
+      </div>
+    `;
+    listCont.appendChild(card);
+  });
+}
+
+// Set answer for an audit question
+async function setAuditAnswer(dutyId, choice) {
+  if (!appState.auditAnswers) appState.auditAnswers = {};
+  appState.auditAnswers[dutyId] = choice;
+
+  const total = (appState.duties && appState.duties.length > 0) ? appState.duties.length : 40;
+  const answered = Object.keys(appState.auditAnswers).filter(k => appState.auditAnswers[k]).length;
+  appState.auditProgress = Math.min(100, Math.round((answered / total) * 100));
+
+  renderOwnerAuditList();
+  renderAuditReminderBanner();
+
+  if (appState.facilityCode) {
+    try {
+      await apiSaveFacilityAudit(appState.facilityCode, appState.auditAnswers, appState.auditProgress);
+    } catch (e) {
+      console.warn("Auto-save audit failed:", e);
+    }
+  }
+}
+
+// Switch section filter in audit screen
+function setAuditSectionFilter(sectionName) {
+  appState.currentAuditSection = sectionName;
+  renderOwnerAuditList();
+}
+
+// Send defect push notification to facility employees via MAX bot
+async function notifyDefectToEmployees(dutyId) {
+  const duty = appState.duties.find(d => d.id === dutyId);
+  if (!duty || !appState.facilityCode) return;
+  try {
+    const res = await apiNotifyFacilityDefect(appState.facilityCode, {
+      duty_id: duty.id,
+      title: duty.question,
+      violation: duty.violation,
+      remediation: duty.remediation,
+      assigned_role: duty.assignedTo || duty.default_role || "Персонал кухни / зала",
+      reporter_name: "Руководитель (" + (appState.venue.name || "Объект") + ")"
+    });
+    alert(res.message || "Оповещение с регламентом исправления успешно направлено сотрудникам заведения в MAX.");
+  } catch (e) {
+    alert("Ошибка отправки: " + e.message);
+  }
+}
+
+// Share defect report to work chat
+function shareDefectToChat(dutyId) {
+  const duty = appState.duties.find(d => d.id === dutyId);
+  if (!duty) return;
+  const text = "Внимание! Требуется устранить нарушение (СанПиН 2.3/2.4.3590-20):\n\n" +
+    "Объект: " + (appState.venue.name || appState.facilityCode) + "\n" +
+    "Пункт: " + duty.question + "\n" +
+    "Норма: " + duty.norm + "\n\n" +
+    "Выявленный дефект: " + duty.violation + "\n\n" +
+    "Регламент исправления:\n" + duty.remediation + "\n\n" +
+    "Ответственная роль: " + (duty.assignedTo || duty.default_role || "Сотрудник") + "\n" +
+    "Риск штрафа: " + duty.fineText;
+
+  if (navigator.share) {
+    navigator.share({
+      title: "Предписание по устранению нарушения",
+      text: text
+    }).catch(() => {});
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert("Текст предписания скопирован в буфер обмена. Вставьте его в рабочий чат смены.");
+    }).catch(() => {
+      prompt("Скопируйте текст предписания для отправки в чат:", text);
+    });
+  } else {
+    prompt("Скопируйте текст предписания для отправки в чат:", text);
+  }
+}
+
+// Finish audit and return to dashboard
+async function finishAuditAndReturn() {
+  if (appState.facilityCode) {
+    try {
+      await apiSaveFacilityAudit(appState.facilityCode, appState.auditAnswers, appState.auditProgress);
+    } catch (e) {}
+  }
+  await loadOwnerDashboard();
+  showScreen("screenOwnerDashboard");
 }
 
 async function refreshDashboardData() {

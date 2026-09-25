@@ -98,7 +98,7 @@ function renderEmployeeShiftScreen() {
   }
 }
 
-// Render duties/tasks for employee's role
+// Render duties/tasks for employee's role with full remediation cycle
 function renderEmployeeTasks() {
   const cont = document.getElementById("employeeTasksList");
   cont.innerHTML = "";
@@ -114,30 +114,199 @@ function renderEmployeeTasks() {
   myTasks.forEach(task => {
     const isDone = appState.employee.completedTasks.includes(task.id);
     const photoUrl = appState.employee.taskPhotos[task.id];
+    const isAuditViolation = (appState.auditAnswers && appState.auditAnswers[task.id] === "violation");
+    const isManualDefect = Boolean(appState.employeeDefects && appState.employeeDefects[task.id]);
+    const hasActiveDefect = (isAuditViolation || isManualDefect) && !isDone;
+    const isResolved = isDone && (isAuditViolation || isManualDefect || Boolean(photoUrl));
 
     const card = document.createElement("div");
-    card.className = "duty-card" + (isDone ? " done" : "");
 
-    let photoSection = `
-      <div class="photo-upload-row">
-        <label style="font-size:11px; color:#555555;">Фото подтверждение выполнения:</label>
-        <input type="file" accept="image/*" onchange="uploadTaskPhoto(${task.id}, this)">
-        ${photoUrl ? `<a href="${photoUrl}" target="_blank" class="photo-preview-link">Просмотреть прикрепленное фото</a>` : ""}
-      </div>
-    `;
+    if (hasActiveDefect) {
+      card.className = "duty-card has-defect";
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <span class="defect-badge violation">Зафиксировано нарушение</span>
+          <span style="font-size: 11px; color: #880000; font-weight: 600;">Штраф: ${task.fineText}</span>
+        </div>
+        <div class="duty-title">${task.question}</div>
+        <div class="duty-norm">Норма: ${task.norm} (Зона: ${task.zone})</div>
 
-    card.innerHTML = `
-      <div class="duty-title">${task.question}</div>
-      <div class="duty-norm">Норма: ${task.norm} (Зона: ${task.zone})</div>
-      <div class="duty-fine">Предотвращенный штраф по ст. 6.6 КоАП РФ: ${task.fineText}</div>
-      <label class="duty-check-label">
-        <input type="checkbox" ${isDone ? "checked" : ""} onchange="toggleTaskDone(${task.id}, this.checked)">
-        ${isDone ? "Требование выполнено" : "Отметить выполнение"}
-      </label>
-      ${photoSection}
-    `;
+        <div class="violation-detail-box">
+          <div style="font-weight: 700; color: #990000; margin-bottom: 4px;">Суть дефекта:</div>
+          <div>${task.violation}</div>
+
+          <div class="remediation-box">
+            <strong>Пошаговый регламент исправления:</strong><br>
+            ${task.remediation}
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-small" style="background:#0077ff; color:#ffffff;" onclick="notifyEmployeeTaskDefect(${task.id})">
+              Оповестить коллег в MAX
+            </button>
+            <button type="button" class="btn btn-small btn-secondary" onclick="shareEmployeeTaskDefect(${task.id})">
+              Отправить в чат смены
+            </button>
+          </div>
+        </div>
+
+        <div class="photo-upload-row">
+          <label style="font-size: 11px; color: #333333; font-weight: 600;">1. Прикрепите фото подтверждения исправления:</label>
+          <input type="file" accept="image/*" onchange="uploadTaskPhoto(${task.id}, this)">
+          ${photoUrl ? `<a href="${photoUrl}" target="_blank" class="photo-preview-link">Просмотреть фото исправления</a>` : ""}
+        </div>
+
+        <div style="margin-top: 10px; display: flex; gap: 8px;">
+          <button type="button" class="btn btn-small" style="background:#137333; color:#ffffff; width:100%;" onclick="resolveTaskDefect(${task.id})">
+            2. Подтвердить устранение дефекта
+          </button>
+        </div>
+      `;
+    } else if (isResolved) {
+      card.className = "duty-card done resolved";
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <span class="defect-badge resolved">Дефект устранен</span>
+          <span style="font-size: 11px; color: #137333; font-weight: 600;">Норма соблюдена</span>
+        </div>
+        <div class="duty-title">${task.question}</div>
+        <div class="duty-norm">Норма: ${task.norm} (Зона: ${task.zone})</div>
+        <div style="font-size: 12px; color: #137333; margin: 6px 0;">
+          Нарушение исправлено согласно регламенту СанПиН. Замечание снято.
+        </div>
+        ${photoUrl ? `<div style="margin-top:4px;"><a href="${photoUrl}" target="_blank" class="photo-preview-link">Просмотреть прикрепленное фото</a></div>` : ""}
+        <button type="button" class="btn-defect-toggle" onclick="toggleTaskDone(${task.id}, false)">
+          Снять отметку о выполнении
+        </button>
+      `;
+    } else {
+      card.className = "duty-card" + (isDone ? " done" : "");
+      let photoSection = `
+        <div class="photo-upload-row">
+          <label style="font-size:11px; color:#555555;">Фото подтверждение выполнения:</label>
+          <input type="file" accept="image/*" onchange="uploadTaskPhoto(${task.id}, this)">
+          ${photoUrl ? `<a href="${photoUrl}" target="_blank" class="photo-preview-link">Просмотреть прикрепленное фото</a>` : ""}
+        </div>
+      `;
+
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <span class="defect-badge compliant">Контроль СанПиН</span>
+          <span style="font-size: 11px; color: #880000; font-weight: 600;">Штраф: ${task.fineText}</span>
+        </div>
+        <div class="duty-title">${task.question}</div>
+        <div class="duty-norm">Норма: ${task.norm} (Зона: ${task.zone})</div>
+        <label class="duty-check-label">
+          <input type="checkbox" ${isDone ? "checked" : ""} onchange="toggleTaskDone(${task.id}, this.checked)">
+          ${isDone ? "Требование выполнено" : "Отметить выполнение"}
+        </label>
+        ${photoSection}
+        <div>
+          <button type="button" class="btn-defect-toggle" onclick="toggleManualDefect(${task.id}, true)">
+            Зафиксировать нарушение / дефект
+          </button>
+        </div>
+      `;
+    }
+
     cont.appendChild(card);
   });
+}
+
+// Toggle manual defect on duty card
+function toggleManualDefect(taskId, flag) {
+  if (!appState.employeeDefects) appState.employeeDefects = {};
+  appState.employeeDefects[taskId] = flag;
+  renderEmployeeTasks();
+}
+
+// Resolve defect after employee completes corrective actions
+async function resolveTaskDefect(taskId) {
+  if (!appState.employee.shiftStarted) {
+    alert("Смена не открыта. Подтверждение доступно только на объекте.");
+    return;
+  }
+
+  if (!appState.employee.completedTasks.includes(taskId)) {
+    appState.employee.completedTasks.push(taskId);
+  }
+  if (!appState.employeeDefects) appState.employeeDefects = {};
+  appState.employeeDefects[taskId] = false;
+
+  if (!appState.auditAnswers) appState.auditAnswers = {};
+  appState.auditAnswers[taskId] = "compliant";
+
+  renderEmployeeTasks();
+
+  if (appState.user_id) {
+    try {
+      await apiSaveEmployeeTasks(
+        appState.user_id,
+        appState.employee.completedTasks,
+        appState.employee.taskPhotos
+      );
+    } catch (e) {
+      console.warn("Save employee tasks failed:", e);
+    }
+  }
+
+  if (appState.facilityCode) {
+    try {
+      await apiSaveFacilityAudit(appState.facilityCode, appState.auditAnswers, appState.auditProgress);
+    } catch (e) {
+      console.warn("Save audit status failed:", e);
+    }
+  }
+
+  alert("Дефект успешно устранен. Статус соответствия СанПиН подтвержден.");
+}
+
+// Send defect push notification to shift employees via MAX bot
+async function notifyEmployeeTaskDefect(taskId) {
+  const task = appState.duties.find(d => d.id === taskId);
+  if (!task || !appState.facilityCode) return;
+  try {
+    const res = await apiNotifyFacilityDefect(appState.facilityCode, {
+      duty_id: task.id,
+      title: task.question,
+      violation: task.violation,
+      remediation: task.remediation,
+      assigned_role: task.assignedTo || appState.employee.position,
+      reporter_name: `Сотрудник: ${appState.employee.name || "Смена"}`
+    });
+    alert(res.message || "Оповещение с регламентом исправления направлено коллегам по объекту в MAX.");
+  } catch (e) {
+    alert("Ошибка отправки: " + e.message);
+  }
+}
+
+// Share defect report to work chat
+function shareEmployeeTaskDefect(taskId) {
+  const task = appState.duties.find(d => d.id === taskId);
+  if (!task) return;
+  const text = "Внимание! На объекте выявлено нарушение (СанПиН 2.3/2.4.3590-20):\n\n" +
+    "Объект: " + (appState.venue.name || appState.facilityCode) + "\n" +
+    "Зона: " + task.zone + "\n" +
+    "Требование: " + task.question + "\n\n" +
+    "Суть дефекта: " + task.violation + "\n\n" +
+    "Инструкция по устранению:\n" + task.remediation + "\n\n" +
+    "Ответственный: " + (task.assignedTo || appState.employee.position) + "\n" +
+    "Риск штрафа: " + task.fineText;
+
+  if (navigator.share) {
+    navigator.share({
+      title: "Предписание по устранению нарушения",
+      text: text
+    }).catch(() => {});
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert("Текст предписания скопирован в буфер обмена. Вставьте его в рабочий чат смены.");
+    }).catch(() => {
+      prompt("Скопируйте текст предписания для отправки в чат:", text);
+    });
+  } else {
+    prompt("Скопируйте текст предписания для отправки в чат:", text);
+  }
 }
 
 // Toggle completion of a task
@@ -214,3 +383,4 @@ async function endEmployeeShiftFromWeb() {
   }
   closeWebAppAndReturnToBot();
 }
+

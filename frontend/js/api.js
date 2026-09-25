@@ -96,3 +96,27 @@ async function apiUploadPhoto(file) {
   if (!res.ok) throw new Error("Ошибка загрузки фото");
   return await res.json();
 }
+
+async function apiSaveFacilityAudit(code, auditAnswers, auditProgress) {
+  const res = await fetch(`/api/facility/${code}/audit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      audit_answers: auditAnswers,
+      audit_progress: auditProgress
+    })
+  });
+  if (!res.ok) throw new Error("Ошибка сохранения результатов самообследования");
+  return await res.json();
+}
+
+async function apiNotifyFacilityDefect(code, defectData) {
+  const res = await fetch(`/api/facility/${code}/notify-defect`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(defectData)
+  });
+  if (!res.ok) throw new Error("Ошибка отправки оповещения о дефекте");
+  return await res.json();
+}
+

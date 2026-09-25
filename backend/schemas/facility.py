@@ -27,3 +27,19 @@ class FacilityAuthRequest(BaseModel):
 class AddStaffRequest(BaseModel):
     full_name: str
     position: str
+
+
+class FacilityAuditRequest(BaseModel):
+    audit_answers: dict = {}
+    audit_progress: int = 0
+
+
+class DefectNotifyRequest(BaseModel):
+    duty_id: int
+    title: str
+    violation: str
+    remediation: str
+    assigned_role: str | None = None
+    reporter_name: str | None = "Контролер / Руководитель"
+
+

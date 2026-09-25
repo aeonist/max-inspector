@@ -33,6 +33,8 @@ class Facility(Base):
     positions_json = Column(Text, default="[]")
     duties_json = Column(Text, default="[]")
     risk_category = Column(String(50), default="Умеренный риск")
+    audit_answers_json = Column(Text, default="{}")
+    audit_progress = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     employees = relationship("Employee", back_populates="facility")

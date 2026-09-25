@@ -9,10 +9,15 @@ from database import get_db
 from models import Employee, Facility
 from schemas.facility import (
     AddStaffRequest,
+    DefectNotifyRequest,
+    FacilityAuditRequest,
     FacilityAuthRequest,
     FacilityUpdateRequest,
 )
-from services.notifier import notify_owner_facility_saved
+from services.notifier import (
+    notify_employees_defect,
+    notify_owner_facility_saved,
+)
 from utils.generators import generate_unique_employee_code
 from utils.shifts import expire_old_shifts
 
@@ -60,8 +65,26 @@ def get_facility(code: str, db: Session = Depends(get_db)):
         "staff_count": fac.staff_count,
         "positions": json.loads(fac.positions_json or "[]"),
         "duties": json.loads(fac.duties_json or "[]"),
+        "audit_answers": json.loads(fac.audit_answers_json or "{}"),
+        "audit_progress": fac.audit_progress or 0,
         "staff": staff,
     }
+
+
+# Save facility audit answers and progress
+@router.post("/{code}/audit")
+def update_facility_audit(
+    code: str, payload: FacilityAuditRequest, db: Session = Depends(get_db)
+):
+    fac = db.query(Facility).filter(Facility.code == code).first()
+    if not fac:
+        raise HTTPException(status_code=404, detail="Заведение не найдено")
+
+    fac.audit_answers_json = json.dumps(payload.audit_answers, ensure_ascii=False)
+    fac.audit_progress = payload.audit_progress
+    db.commit()
+
+    return {"status": "ok", "audit_progress": fac.audit_progress}
 
 
 # Verify facility auth
@@ -177,3 +200,26 @@ def unlink_staff_member(
     db.commit()
 
     return {"status": "ok", "employee_id": emp.id}
+
+
+# Broadcast defect alert to facility employees
+@router.post("/{code}/notify-defect")
+async def notify_facility_defect(
+    code: str, payload: DefectNotifyRequest, db: Session = Depends(get_db)
+):
+    fac = db.query(Facility).filter(Facility.code == code).first()
+    if not fac:
+        raise HTTPException(status_code=404, detail="Заведение не найдено")
+
+    await notify_employees_defect(
+        db=db,
+        facility_id=fac.id,
+        facility_name=fac.name,
+        duty_title=payload.title,
+        violation=payload.violation,
+        remediation=payload.remediation,
+        assigned_role=payload.assigned_role or "Персонал кухни / зала",
+        reporter_name=payload.reporter_name or "Контролер / Руководитель",
+    )
+    return {"status": "ok", "message": "Оповещение отправлено сотрудникам"}
+
