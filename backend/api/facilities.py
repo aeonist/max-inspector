@@ -20,6 +20,7 @@ from services.notifier import (
 )
 from utils.generators import generate_unique_employee_code
 from utils.shifts import expire_old_shifts
+from utils.timefmt import format_local_time
 
 router = APIRouter(prefix="/api/facility", tags=["facilities"])
 logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ def get_facility(code: str, db: Session = Depends(get_db)):
                 "user_id": emp.user_id,
                 "shift_active": emp.shift_active,
                 "shift_started_at": (
-                    emp.shift_started_at.strftime("%H:%M")
+                    format_local_time(emp.shift_started_at)
                     if emp.shift_started_at
                     else None
                 ),

@@ -25,7 +25,8 @@ from utils.generators import (
     generate_unique_facility_code,
 )
 from utils.geo import calculate_distance
-from utils.shifts import expire_old_shifts
+from utils.shifts import expire_old_shifts, open_shift
+from utils.timefmt import format_local_time
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ async def handle_start(event: MessageCreated):
 
                 if emp.shift_active:
                     time_str = (
-                        emp.shift_started_at.strftime("%H:%M")
+                        format_local_time(emp.shift_started_at)
                         if emp.shift_started_at
                         else ""
                     )
@@ -253,7 +254,7 @@ async def callback_end_shift(callback: MessageCallback):
             db.commit()
 
             tasks = json.loads(emp.completed_tasks_json or "[]")
-            time_str = emp.shift_ended_at.strftime("%H:%M")
+            time_str = format_local_time(emp.shift_ended_at)
             await callback.message.answer(
                 text=(
                     "Смена успешно завершена.\n\n"
@@ -308,13 +309,10 @@ async def handle_incoming_message(event: MessageCreated):
                     if fac.geo_required and fac.geo_lat and fac.geo_lon:
                         dist = calculate_distance(lat, lon, target_lat, target_lon)
                         if dist <= 100:
-                            emp.shift_active = True
-                            emp.shift_started_at = datetime.utcnow()
-                            emp.shift_ended_at = None
-                            emp.last_geo_distance = dist
+                            open_shift(emp, dist)
                             db.commit()
 
-                            time_str = emp.shift_started_at.strftime("%H:%M")
+                            time_str = format_local_time(emp.shift_started_at)
                             builder = get_employee_active_shift_keyboard(
                                 fac.code, user_id, emp.id
                             )
@@ -338,11 +336,9 @@ async def handle_incoming_message(event: MessageCreated):
                                 attachments=[builder.as_markup()],
                             )
                     else:
-                        emp.shift_active = True
-                        emp.shift_started_at = datetime.utcnow()
-                        emp.shift_ended_at = None
+                        open_shift(emp)
                         db.commit()
-                        time_str = emp.shift_started_at.strftime("%H:%M")
+                        time_str = format_local_time(emp.shift_started_at)
                         builder = get_employee_tasks_link_keyboard(fac.code, user_id)
                         await event.message.answer(
                             text=(
