@@ -81,6 +81,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   if (userId) localStorage.setItem("app_user_id", String(userId));
 
   let facilityLoaded = false;
+  let setupDone = false;
   if (code) {
     appState.facilityCode = code;
     try {
@@ -103,6 +104,8 @@ window.addEventListener("DOMContentLoaded", async () => {
         appState.auditProgress = data.audit_progress;
       }
       appState.backendStaff = data.staff || [];
+      // Setup wizard saves duties on finish, so their presence means the facility is configured
+      setupDone = Boolean(data.duties && data.duties.length > 0);
       facilityLoaded = true;
     } catch (e) {
       console.warn("Facility not found, clearing stale storage:", e);
@@ -119,8 +122,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   if (role === "owner") {
     appState.role = "owner";
     localStorage.setItem("app_role", "owner");
-    if (mode === "new" || !appState.venue.address) {
-      showScreen("screenOwnerStep1");
+    if (!setupDone) {
+      openOwnerSetup();
     } else {
       await loadOwnerDashboard();
       showScreen("screenOwnerDashboard");

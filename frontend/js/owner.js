@@ -60,6 +60,18 @@ function detectOwnerLocation() {
   );
 }
 
+// Open setup wizard with current facility values prefilled
+function openOwnerSetup() {
+  document.getElementById("venueName").value = appState.venue.name || "";
+  document.getElementById("venueAddress").value = appState.venue.address || "";
+  document.getElementById("venueLat").value = appState.venue.lat ?? "";
+  document.getElementById("venueLon").value = appState.venue.lon ?? "";
+  if (appState.backendStaff.length > 0) {
+    appState.staffList = appState.backendStaff.map(s => ({ full_name: s.full_name, position: s.position }));
+  }
+  showScreen("screenOwnerStep1");
+}
+
 // Save Step 1 (Address, GPS, Custom PIN)
 function saveOwnerStep1(skip) {
   const pinVal = document.getElementById("venuePin").value.trim();
@@ -69,14 +81,16 @@ function saveOwnerStep1(skip) {
     appState.adminPin = "1234";
   }
 
+  // Name and address are kept in both cases; "skip" only disables geo control
+  const nameVal = document.getElementById("venueName").value.trim();
+  if (nameVal) appState.venue.name = nameVal;
+  appState.venue.address = document.getElementById("venueAddress").value.trim();
+
   if (skip) {
     appState.venue.geoRequired = false;
     appState.venue.lat = null;
     appState.venue.lon = null;
   } else {
-    const nameVal = document.getElementById("venueName").value.trim();
-    if (nameVal) appState.venue.name = nameVal;
-    appState.venue.address = document.getElementById("venueAddress").value.trim();
     const lat = parseFloat(document.getElementById("venueLat").value);
     const lon = parseFloat(document.getElementById("venueLon").value);
     if (!isNaN(lat) && !isNaN(lon)) {
@@ -196,6 +210,8 @@ function renderDutiesAssignment() {
   cont.innerHTML = "";
 
   appState.duties.forEach((duty, idx) => {
+    // Documents and premises are checked by the owner during self-audit, not assigned to shifts
+    if (duty.taskType && duty.taskType !== "shift") return;
     const card = document.createElement("div");
     card.className = "item-card";
 
@@ -229,7 +245,8 @@ function addCustomDuty() {
     : "Не назначено";
 
   appState.duties.push({
-    id: appState.duties.length + 1,
+    id: appState.duties.reduce((max, d) => Math.max(max, d.id || 0), 0) + 1,
+    taskType: "shift",
     zone: "Внутренний распорядок",
     question: name,
     norm: "Регламент предприятия",
@@ -324,7 +341,7 @@ function renderAuditReminderBanner() {
   const banner = document.getElementById("ownerAuditBanner");
   if (!banner) return;
 
-  const total = (appState.duties && appState.duties.length > 0) ? appState.duties.length : 40;
+  const total = (appState.duties && appState.duties.length > 0) ? appState.duties.length : 1;
   const answers = appState.auditAnswers || {};
   const answeredCount = Object.keys(answers).filter(k => answers[k]).length;
   const pct = Math.min(100, Math.round((answeredCount / total) * 100));
@@ -345,7 +362,7 @@ function renderAuditReminderBanner() {
     banner.classList.add("completed");
     if (titleElem) titleElem.textContent = "Самообследование объекта пройдено на 100%";
     if (badgeElem) badgeElem.textContent = "100% готовность";
-    if (textElem) textElem.textContent = "Все 40 обязательных санитарных требований СанПиН 2.3/2.4.3590-20 проверены. Объект готов к надзорным проверкам и формированию Декларации (ст. 51 248-ФЗ).";
+    if (textElem) textElem.textContent = `Все ${total} пунктов проверочного листа Роспотребнадзора проверены. Объект готов к надзорным проверкам и формированию Декларации (ст. 51 248-ФЗ).`;
     if (btnElem) btnElem.textContent = "Просмотреть аудит";
   } else {
     banner.classList.remove("completed");
@@ -405,7 +422,7 @@ function renderOwnerAuditList() {
   }
 
   // Update top progress on screen
-  const total = duties.length || 40;
+  const total = duties.length || 1;
   const answeredCount = Object.keys(answers).filter(k => answers[k]).length;
   const pct = Math.min(100, Math.round((answeredCount / total) * 100));
 
@@ -461,10 +478,12 @@ function renderOwnerAuditList() {
     card.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
         <span style="font-size:11px; font-weight:700; color:#555555; text-transform:uppercase;">${duty.section || duty.zone} &bull; Пункт №${duty.id}</span>
-        <span style="font-size:11px; color:#666666; font-weight:500;">СанПиН 2.3/2.4.3590-20</span>
+        <span style="font-size:11px; color:#666666; font-weight:500;">${duty.checklistRef ? "Вопрос инспектора" : "Внутренний регламент"}</span>
       </div>
       <div class="item-card-title">${duty.question}</div>
+      ${duty.appliesTo ? `<div class="item-card-meta"><em>Применимо, если: ${duty.appliesTo.toLowerCase()}. Иначе отметьте «Не применимо».</em></div>` : ""}
       <div class="item-card-meta">${duty.norm}</div>
+      ${duty.basis ? `<div class="item-card-meta" style="font-size:11px; color:#777777;">Основание: ${duty.basis}${duty.checklistRef ? ". " + duty.checklistRef : ""}</div>` : ""}
 
       ${violationBlock}
 
@@ -489,7 +508,7 @@ async function setAuditAnswer(dutyId, choice) {
   if (!appState.auditAnswers) appState.auditAnswers = {};
   appState.auditAnswers[dutyId] = choice;
 
-  const total = (appState.duties && appState.duties.length > 0) ? appState.duties.length : 40;
+  const total = (appState.duties && appState.duties.length > 0) ? appState.duties.length : 1;
   const answered = Object.keys(appState.auditAnswers).filter(k => appState.auditAnswers[k]).length;
   appState.auditProgress = Math.min(100, Math.round((answered / total) * 100));
 
@@ -593,7 +612,7 @@ function renderDashboardShiftTab() {
 
   const tasksMetric = document.getElementById("metricTasksProgress");
   if (tasksMetric) {
-    const totalTarget = totalTasksAssigned > 0 ? totalTasksAssigned : (appState.duties.length || 40);
+    const totalTarget = totalTasksAssigned > 0 ? totalTasksAssigned : (appState.duties.length || 0);
     tasksMetric.textContent = `${totalTasksDone} из ${totalTarget}`;
   }
 
@@ -648,6 +667,8 @@ function renderDashboardManagementTab() {
     ? "Включен (радиус 100 м)"
     : "Отключен";
 
+  renderComplianceIndex();
+
   const tbody = document.getElementById("mgmtStaffTableBody");
   tbody.innerHTML = "";
 
@@ -684,6 +705,30 @@ function renderDashboardManagementTab() {
     opt.textContent = p.name;
     select.appendChild(opt);
   });
+}
+
+// Compliance index: compliant items out of applicable ones (answers "na" are excluded)
+function calcComplianceIndex() {
+  const duties = appState.duties || [];
+  const answers = appState.auditAnswers || {};
+  const applicable = duties.filter(d => answers[d.id] !== "na").length;
+  const compliant = duties.filter(d => answers[d.id] === "compliant").length;
+  const answered = duties.filter(d => answers[d.id]).length;
+  return {
+    percent: applicable > 0 ? Math.round((compliant / applicable) * 100) : 0,
+    compliant: compliant,
+    applicable: applicable,
+    answered: answered
+  };
+}
+
+function renderComplianceIndex() {
+  const elem = document.getElementById("mgmtComplianceIndex");
+  if (!elem) return;
+  const idx = calcComplianceIndex();
+  elem.textContent = idx.answered === 0
+    ? "не рассчитан (самообследование не начато)"
+    : `${idx.percent}% (соблюдается ${idx.compliant} из ${idx.applicable} применимых пунктов)`;
 }
 
 // Unlink staff member

@@ -140,7 +140,7 @@
       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
         <div>
           <div id="auditBannerTitle" class="audit-banner-title">Самообследование объекта не завершено</div>
-          <div id="auditBannerCount" class="audit-banner-count">Проверено: 0 из 40 пунктов</div>
+          <div id="auditBannerCount" class="audit-banner-count">Проверено: 0 пунктов</div>
         </div>
         <span id="auditBannerBadge" class="audit-banner-badge">0% пройдено</span>
       </div>
@@ -220,7 +220,7 @@
       <div class="item-card">
         <div class="item-card-title">Декларация соблюдения обязательных требований</div>
         <div class="item-card-meta">Сформированная декларация направляется в контрольный орган и освобождает объект от плановых проверок на срок до 3 лет.</div>
-        <div class="item-card-meta" style="margin-top: 6px;">Уровень соответствия СанПиН: <strong>100%</strong></div>
+        <div class="item-card-meta" style="margin-top: 6px;">Индекс соответствия: <strong id="mgmtComplianceIndex">—</strong></div>
         <a href="https://www.consultant.ru/document/cons_doc_LAW_358890/578f4477c77c1d76378415d86ef8e3648e42994c/" target="_blank" class="btn btn-secondary btn-small" style="text-decoration:none; margin-top:8px;">Открыть текст статьи 51 248-ФЗ</a>
       </div>
 
@@ -239,7 +239,7 @@
       </div>
 
       <div style="margin-top: 16px;">
-        <button class="btn" onclick="showScreen('screenOwnerStep1')">Редактировать параметры заведения</button>
+        <button class="btn" onclick="openOwnerSetup()">Редактировать параметры заведения</button>
         <button class="btn btn-secondary" onclick="closeWebAppAndReturnToBot()">Вернуться в чат с ботом</button>
       </div>
     </div>
@@ -257,7 +257,7 @@
 
     <div class="item-card" style="margin-bottom: 14px; background: #ffffff;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-        <span id="auditScreenCountText" style="font-size: 13px; font-weight: 600; color: #333333;">Проверено: 0 из 40 пунктов</span>
+        <span id="auditScreenCountText" style="font-size: 13px; font-weight: 600; color: #333333;">Проверено: 0 пунктов</span>
         <span id="auditScreenPercentText" style="font-size: 13px; font-weight: 700; color: #0077ff;">0%</span>
       </div>
       <div class="progress-bar-container">

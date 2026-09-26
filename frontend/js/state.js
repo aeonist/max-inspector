@@ -7,22 +7,18 @@ const appState = {
   history: [],
   venue: {
     name: "Объект общественного питания",
-    address: "г. Казань, ул. Петербургская, д. 28",
-    lat: 55.783611,
-    lon: 49.129444,
+    address: "",
+    lat: null,
+    lon: null,
     geoRequired: true,
-    staffCount: 3
+    staffCount: 0
   },
   positions: [
     { name: "Повар" },
     { name: "Официант" },
     { name: "Уборщик" }
   ],
-  staffList: [
-    { full_name: "Иванов Алексей", position: "Повар" },
-    { full_name: "Петрова Анна", position: "Официант" },
-    { full_name: "Сидоров Иван", position: "Уборщик" }
-  ],
+  staffList: [],
   backendStaff: [],
   duties: [],
   auditAnswers: {},
@@ -55,23 +51,32 @@ async function loadChecklists() {
     const res = await fetch("checklists.json");
     const list = await res.json();
     appState.duties = list.map((item, idx) => {
+      // Lower bound of the legal entity fine, e.g. "30 000 – 50 000 ₽" -> 30000
       let fineNum = 30000;
       if (item.fines && item.fines.legal_entity) {
-        const m = item.fines.legal_entity.replace(/\s+/g, "").match(/(\d+)/);
-        if (m) fineNum = parseInt(m[1]) * 1000;
+        const m = item.fines.legal_entity.match(/^[\d\s]+/);
+        if (m) fineNum = parseInt(m[0].replace(/\s+/g, ""), 10);
       }
+      const taskType = item.task_type || "shift";
       return {
         id: item.id || (idx + 1),
         section: item.section || item.zone,
         zone: item.zone,
         question: item.question,
         norm: item.norm,
+        basis: item.basis || "",
+        checklistRef: item.checklist_ref || "",
+        appliesTo: item.applies_to || "",
+        photoHint: item.photo_hint || "",
+        referencePhoto: item.reference_photo || null,
+        taskType: taskType,
         violation: item.violation || "Несоблюдение санитарных требований",
         remediation: item.remediation || "Привести объект в соответствие с нормативом СанПиН.",
         article: item.article || "Ст. 6.6 КоАП РФ",
         fineText: item.fines ? item.fines.legal_entity : "30 000 – 50 000 ₽",
         fineAmount: fineNum,
-        assignedTo: item.default_role || getDefaultRoleForZone(item.zone)
+        // Only recurring shift duties are assigned to positions; documents and premises stay with the owner
+        assignedTo: taskType === "shift" ? (item.default_role || getDefaultRoleForZone(item.zone)) : null
       };
     });
   } catch (e) {
