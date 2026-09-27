@@ -802,3 +802,5 @@ h3.zone { font-size: 14px; color: var(--muted); font-weight: 600; margin: 14px 0
 .answer-hint .inline-link { display: inline-block; padding: 8px 0; }
 .chat-btn { margin-top: 20px; }
 .stack .chat-btn { margin-top: 0; }
+
+.zone-filter { margin: 10px 0 2px; }

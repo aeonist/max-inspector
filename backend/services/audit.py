@@ -184,12 +184,12 @@ def set_answer(
     return answer, defect, created
 
 
-# Defect waiting for this employee: by position, or the owner's personal shift task
+# Defect waiting for this employee: by position; the owner on shift may fix any shift violation
 def is_for_employee(defect: Defect, emp: Employee) -> bool:
-    if defect.to_owner:
+    if emp.is_owner:
         item = get_item(defect.item_id) if defect.item_id else None
-        return bool(emp.is_owner) and bool(item) and is_shift_item(item)
-    return defect.assigned_position == emp.position
+        return bool(item) and is_shift_item(item)
+    return not defect.to_owner and defect.assigned_position == emp.position
 
 
 def defects_for_employee(db: Session, emp: Employee) -> list[Defect]:

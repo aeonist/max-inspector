@@ -562,26 +562,22 @@ Actions.roleShift = async (el) => {
   const name = state.owner_name || Bridge.userName || App.me.user.name || "";
   const choice = await sheet(
     html`<h3>Работаю на смене</h3>
-      <p class="muted">Вы будете получать задачи своей должности и нарушения по ней — как сотрудники. Удобно, если вы сами стоите на смене, и чтобы проверить путь сотрудника с одного аккаунта.</p>
-      <label class="field"><span>Как вас подписывать</span><input id="roleName" type="text" maxlength="120" value="${name}" placeholder="Имя и фамилия"></label>
-      <p class="muted small">Моя должность:</p>`,
+      <p class="muted">Вы будете отмечать смены и видеть все задачи смены и все нарушения по ним — можно взять любое, кто бы за него ни отвечал.</p>
+      <label class="field"><span>Как вас подписывать</span><input id="roleName" type="text" maxlength="120" value="${name}" placeholder="Имя и фамилия"></label>`,
     [
-      ...state.positions.map((p) => ({
-        label: p,
-        read: (root) => ({ position: p, name: root.querySelector("#roleName").value.trim() }),
-      })),
+      { label: "Включить", kind: "primary", read: (root) => ({ name: root.querySelector("#roleName").value.trim() }) },
       { label: "Отмена", value: null },
     ]
   );
   if (!choice) return;
-  await setShiftRole(el, true, choice.position, choice.name);
+  await setShiftRole(el, true, choice.name);
 };
 
-async function setShiftRole(el, works, position, name) {
+async function setShiftRole(el, works, name) {
   await busy(el, async () => {
-    App.ownerState = await api("PUT", "/api/owner/shift-role", { works, position, name: name || null });
+    App.ownerState = await api("PUT", "/api/owner/shift-role", { works, name: name || null });
     App.me = await api("GET", "/api/me");
-    toast(works ? `Вы на смене как ${position} ✓` : "Роль сотрудника выключена", { type: "success" });
+    toast(works ? "Вы на смене ✓ Видны все задачи" : "Роль сотрудника выключена", { type: "success" });
     await Router.go(works ? "shift" : "home", {}, { reset: true });
   });
 }

@@ -1,6 +1,6 @@
 // Staff: join by invite, QR scan, "Моя смена"
 
-const Staff = { shift: null, problemPhotos: [] };
+const Staff = { shift: null, problemPhotos: [], zone: "all" };
 
 // ---------- Join ----------
 
@@ -146,19 +146,25 @@ function shiftView(data) {
   const shift = data.shift;
   const urgent = data.defects.filter((d) => d.status !== "fixed");
   const onReview = data.defects.filter((d) => d.status === "fixed");
+  const isOwner = data.employee.is_owner;
+  const zoneNames = [...new Set(data.duties.map((d) => d.zone))];
+  if (!zoneNames.includes(Staff.zone)) Staff.zone = "all";
+  const visible = data.duties.filter((d) => Staff.zone === "all" || d.zone === Staff.zone);
   const zones = {};
-  data.duties.forEach((d) => {
+  visible.forEach((d) => {
     (zones[d.zone] = zones[d.zone] || []).push(d);
   });
   const done = data.duties.filter((d) => d.done).length;
+  const zoneCount = (zone) => {
+    const list = data.duties.filter((d) => zone === "all" || d.zone === zone);
+    return `${list.filter((d) => d.done).length}/${list.length}`;
+  };
 
   return html`${roleTabs("shift")}
     <section class="card">
       <p class="muted small">${data.facility.name}</p>
-      <h2>${data.employee.full_name}<span class="muted"> · ${data.employee.position}</span></h2>
-      ${data.employee.is_owner
-        ? html`<button type="button" class="btn-link small" data-act="ownerRoleMenu">Сменить должность или выйти из роли</button>`
-        : ""}
+      <h2>${data.employee.full_name}<span class="muted"> · ${isOwner ? "все задачи смены" : data.employee.position}</span></h2>
+      ${isOwner ? html`<button type="button" class="btn-link small" data-act="ownerRoleMenu">Выйти из роли сотрудника</button>` : ""}
       ${shift
         ? html`<p class="status status-green">Смена с ${shift.started}${shift.geo_status === "verified" ? " · 📍 на месте" : ""}${shift.geo_status === "no_coords" ? " · место не проверено" : ""}</p>`
         : html`<p class="status status-gray">Смена не начата</p>
@@ -193,6 +199,14 @@ function shiftView(data) {
       ${data.duties.length
         ? html`<div class="bar"><div class="bar-fill" style="width:${data.duties.length ? Math.round((done / data.duties.length) * 100) : 0}%"></div></div>
           ${shift ? "" : html`<p class="muted small">Отмечать задачи можно после начала смены.</p>`}
+          ${zoneNames.length > 1
+            ? html`<div class="chips chips-small zone-filter">
+                <button type="button" class="chip ${Staff.zone === "all" ? "selected" : ""}" data-act="filterZone" data-zone="all">Все · ${zoneCount("all")}</button>
+                ${zoneNames.map(
+                  (z) => html`<button type="button" class="chip ${Staff.zone === z ? "selected" : ""}" data-act="filterZone" data-zone="${z}">${z} · ${zoneCount(z)}</button>`
+                )}
+              </div>`
+            : ""}
           ${Object.entries(zones).map(
             ([zone, duties]) => html`<h3 class="zone">${zone}</h3>
               <ul class="task-list card">
@@ -200,13 +214,15 @@ function shiftView(data) {
                   (d) => html`<li class="task ${d.done ? "done" : ""}">
                     <button type="button" class="task-check" data-act="toggleTask" data-id="${d.id}" data-done="${d.done ? "1" : ""}" ${raw(shift ? "" : "disabled")}
                       aria-label="${d.done ? "Снять отметку" : "Отметить выполненной"}">${d.done ? "✓" : ""}</button>
-                    <span class="task-text">${d.question}${d.photos.length ? html` <span class="muted small">📷 ${d.photos.length}</span>` : ""}</span>
+                    <span class="task-text">${d.question}${d.photos.length ? html` <span class="muted small">📷 ${d.photos.length}</span>` : ""}${isOwner && d.position
+                      ? html`<span class="muted small block">${d.position}</span>`
+                      : ""}</span>
                     <button type="button" class="icon-btn" data-act="taskMenu" data-id="${d.id}" aria-label="Подробнее">⋯</button>
                   </li>`
                 )}
               </ul>`
           )}`
-        : html`<p class="muted">На вашу должность задач нет. Руководитель может добавить их в настройках.</p>`}
+        : html`<p class="muted">${isOwner ? "Задач смены пока нет. Их можно добавить в настройках." : "На вашу должность задач нет. Руководитель может добавить их в настройках."}</p>`}
     </section>
 
     <div class="stack">
@@ -216,21 +232,21 @@ function shiftView(data) {
     </div>`;
 }
 
-// Owner in the employee role: try another position's duties, or turn the role off
+// Show the duties of one zone (kitchen, storage...) or all of them
+Actions.filterZone = (el) => {
+  Staff.zone = el.dataset.zone;
+  mount("#app", screen("Моя смена", shiftView(Staff.shift), { back: Router.stack.length > 1 }));
+};
+
+// Owner in the employee role: turn it off
 Actions.ownerRoleMenu = async (el) => {
-  const state = App.ownerState || (await api("GET", "/api/owner/state"));
-  const current = Staff.shift.employee.position;
-  const choice = await sheet(
-    html`<h3>Моя роль на смене</h3><p class="muted small">Сейчас: ${current}. Задачи и нарушения приходят по должности.</p>`,
-    [
-      ...state.positions.filter((p) => p !== current).map((p) => ({ label: `Стать: ${p}`, value: p })),
-      { label: "Я не работаю на смене", kind: "danger", value: "__off" },
-      { label: "Отмена", value: null },
-    ]
+  const ok = await confirmSheet(
+    "Выйти из роли сотрудника?",
+    "Смена закроется, а задачи смены пропадут из вашего меню. Включить роль снова можно вкладкой «Моя смена».",
+    "Выйти",
+    "danger"
   );
-  if (!choice) return;
-  if (choice === "__off") await setShiftRole(el, false, null);
-  else await setShiftRole(el, true, choice);
+  if (ok) await setShiftRole(el, false, null);
 };
 
 function urgentCard(d) {

@@ -12,14 +12,14 @@ def _join(client, owner_state, user_id, full_name):
 
 
 def test_full_cycle_on_one_account(client, facility, sent, upload):
-    """Owner working as a cook: violation -> own shift -> after photo -> accept -> index grows."""
+    """Owner on shift: nobody else in MAX, so the violation is the owner's -> fix -> accept -> index grows."""
     h = headers(OWNER)
     res = client.put(
         f"/api/owner/audit/{FRYER_ITEM}", headers=h, json={"status": "violation", "photos": [upload(OWNER), upload(OWNER)]}
     )
     body = res.json()
     defect = body["defect"]
-    assert defect["assigned_position"] == "Повар" and defect["to_owner"] is False
+    assert defect["assigned_position"] == "Повар" and defect["to_owner"] is True
     assert len(defect["before_photos"]) == 2
     assert body["delivered"] == ["Алия"]
     card = sent.to(OWNER)[-1]
@@ -51,8 +51,9 @@ def test_staff_fix_is_returned_with_reason(client, facility, sent, upload):
     defect = client.put(
         f"/api/owner/audit/{FRYER_ITEM}", headers=h_owner, json={"status": "violation", "photos": [upload(OWNER)]}
     ).json()["defect"]
-    # Both cooks with linked accounts get the card
-    assert {m["user_id"] for m in sent if "Нарушение" in (m["text"] or "")} == {OWNER, STAFF}
+    # The linked cook gets the card; the owner sees it in their shift anyway
+    assert {m["user_id"] for m in sent if "Нарушение" in (m["text"] or "")} == {STAFF}
+    assert [d["id"] for d in client.get("/api/shift", headers=h_owner).json()["defects"]] == [defect["id"]]
 
     # The employee cannot close the violation; only send a fix for review
     fix = client.post(f"/api/defects/{defect['id']}/fix", headers=h_staff, json={"photos": [upload(STAFF)]})
@@ -93,9 +94,14 @@ def test_shift_tasks(client, facility):
     duty = shift["duties"][0]
     res = client.post(f"/api/shift/tasks/{duty['id']}", headers=h, json={"done": True})
     assert res.json()["stats"]["done"] == 1
-    # A waiter's duty is not the cook's
+    # The owner may take any duty, a waiter's too
     waiter_item = next(k for k, v in facility["assignments"].items() if v == "Официант")
-    assert client.post(f"/api/shift/tasks/{waiter_item}", headers=h, json={"done": True}).status_code == 404
+    assert client.post(f"/api/shift/tasks/{waiter_item}", headers=h, json={"done": True}).status_code == 200
+    # A waiter cannot mark a cook's duty
+    _join(client, facility, STAFF, "Айдар Галиев")
+    client.post("/api/shift/start", headers=headers(STAFF))
+    cook_item = next(k for k, v in facility["assignments"].items() if v == "Повар")
+    assert client.post(f"/api/shift/tasks/{cook_item}", headers=headers(STAFF), json={"done": True}).status_code == 404
 
     res = client.post("/api/shift/end", headers=h, json={"force": False})
     assert res.json()["closed"] is False and res.json()["left"] > 0

@@ -13,7 +13,7 @@ from schemas import (
 )
 from services import audit, notifier
 from services.auth import CurrentUser, current_user
-from services.checklist import duties_for_position
+from services.checklist import duties_for_employee
 from services.facility import active_staff, employee_of, facility_by_invite
 from services.shifts import (
     active_shift,
@@ -71,7 +71,7 @@ def _shift_payload(db: Session, emp: Employee) -> dict:
     facility = emp.facility
     shift = active_shift(db, emp)
     done = {t.item_id: t.photos for t in shift.tasks} if shift else {}
-    duties = duties_for_position(facility, emp.position)
+    duties = duties_for_employee(emp)
     for duty in duties:
         duty["done"] = duty["id"] in done
         duty["photos"] = done.get(duty["id"], [])
@@ -113,7 +113,7 @@ def post_task(item_id: int, payload: TaskRequest, emp: Employee = Depends(get_em
     shift = active_shift(db, emp)
     if not shift:
         raise HTTPException(status_code=409, detail="Смена не начата. Начните её в чате с ботом")
-    if item_id not in {d["id"] for d in duties_for_position(emp.facility, emp.position)}:
+    if item_id not in {d["id"] for d in duties_for_employee(emp)}:
         raise HTTPException(status_code=404, detail="Это не ваша задача")
     set_task_done(db, shift, item_id, payload.done, uploaded_photos(payload.photos))
     return {"stats": shift_stats(db, emp, shift)}

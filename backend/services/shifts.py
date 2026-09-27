@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from config import SHIFT_MAX_HOURS
 from models import Defect, Employee, Shift, ShiftTask
-from services.checklist import duties_for_position
+from services.checklist import duties_for_employee
 from utils.timefmt import utcnow
 
 
@@ -45,7 +45,7 @@ def open_shift(db: Session, employee: Employee, geo_status: str, distance: float
 
 # Progress of a shift: done duties, all duties, violations fixed during it
 def shift_stats(db: Session, employee: Employee, shift: Shift) -> dict:
-    duties = duties_for_position(employee.facility, employee.position)
+    duties = duties_for_employee(employee)
     duty_ids = {d["id"] for d in duties}
     done = {t.item_id for t in shift.tasks} & duty_ids
     fixed = (

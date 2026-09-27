@@ -22,14 +22,12 @@ class SetupRequest(BaseModel):
     custom_duties: list[CustomDuty] = []
     new_staff: list[NewStaff] = []
     owner_works_shift: bool = False
-    owner_position: str | None = None
     owner_name: str | None = Field(default=None, max_length=120)
 
 
-# Owner switches the employee role on or off, or changes their own position
+# Owner switches their own shift role on or off
 class ShiftRoleRequest(BaseModel):
     works: bool
-    position: str | None = Field(default=None, max_length=60)
     name: str | None = Field(default=None, max_length=120)
 
 

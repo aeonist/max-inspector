@@ -123,7 +123,6 @@ def facility(client, sent):
                 {"full_name": "Мария Петрова", "position": "Повар"},
             ],
             "owner_works_shift": True,
-            "owner_position": "Повар",
         },
     )
     assert res.status_code == 200, res.text

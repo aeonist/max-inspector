@@ -35,9 +35,8 @@ DEMO_SETUP = {
         {"full_name": "Ильдар Хабибуллин", "position": "Уборщик"},
     ],
     "owner_works_shift": True,
-    "owner_position": "Повар",
 }
-# Violations: fryer oil goes to the cook (the owner works as a cook), thermometers are the owner's task
+# Violations: fryer oil is the cook's, thermometers are the owner's task
 DEMO_VIOLATIONS = [26, 14]
 # A fix sent by the cook that waits for the owner's review
 DEMO_FIX = 18
@@ -75,7 +74,11 @@ def create_demo_facility(db: Session, owner_user_id: int, owner_name: str) -> Fa
             audit.set_answer(db, facility, item["id"], "compliant", [_library_photo(item["id"], "good")])
 
     for item_id in DEMO_VIOLATIONS:
-        audit.set_answer(db, facility, item_id, "violation", [_library_photo(item_id, "bad")])
+        _, defect, _ = audit.set_answer(db, facility, item_id, "violation", [_library_photo(item_id, "bad")])
+        # Demo staff are not in MAX; keep the shift violation with the cook to show "Нарушения у команды"
+        if defect.assigned_position:
+            defect.to_owner = False
+    db.commit()
 
     # The cook Maria has already sent her fix: before/after waits in "Ждут вашей проверки"
     _, defect, _ = audit.set_answer(db, facility, DEMO_FIX, "violation", [_library_photo(DEMO_FIX, "bad")], "Повар")

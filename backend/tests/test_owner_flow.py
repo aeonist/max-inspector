@@ -6,7 +6,7 @@ from services.checklist import load_checklist
 def test_setup_creates_staff_owner_profile_and_assignments(client, facility):
     assert facility["setup_done"] is True
     assert facility["owner_works_shift"] is True
-    assert facility["owner_position"] == "Повар"
+    assert next(s for s in facility["staff"] if s["is_owner"])["position"] == "Руководитель"
     names = [s["full_name"] for s in facility["staff"]]
     assert names[0] == "Алия"  # the owner goes first
     assert {"Айдар Галиев", "Мария Петрова"} <= set(names)
@@ -113,17 +113,15 @@ def test_owner_switches_employee_role(client, facility):
     assert client.get("/api/me", headers=h).json()["employee"] is None
     assert client.get("/api/shift", headers=h).status_code == 404
 
-    # Back on with another position: the same profile, name from the wizard kept
-    state = client.put("/api/owner/shift-role", headers=h, json={"works": True, "position": "Официант"}).json()
+    # Back on: the same profile, name from the wizard kept, every duty of the shift visible
+    state = client.put("/api/owner/shift-role", headers=h, json={"works": True}).json()
     me = next(s for s in state["staff"] if s["is_owner"])
-    assert me["id"] == owner_emp_id and me["position"] == "Официант" and me["full_name"] == "Алия"
-    assert client.get("/api/shift", headers=h).json()["employee"]["position"] == "Официант"
+    assert me["id"] == owner_emp_id and me["full_name"] == "Алия"
+    positions = {d["position"] for d in client.get("/api/shift", headers=h).json()["duties"]}
+    assert positions == {"Повар", "Официант"}
 
-    bad = client.put("/api/owner/shift-role", headers=h, json={"works": True, "position": "Пилот"})
-    assert bad.status_code == 400
-
-    # The name can be set from the role switch (the link mode has no MAX profile name)
-    state = client.put("/api/owner/shift-role", headers=h, json={"works": True, "position": "Повар", "name": "Алия Х."}).json()
+    # The name can be set from the role switch
+    state = client.put("/api/owner/shift-role", headers=h, json={"works": True, "name": "Алия Х."}).json()
     assert next(s for s in state["staff"] if s["is_owner"])["full_name"] == "Алия Х."
 
 

@@ -108,12 +108,10 @@ def put_shift_role(
     user: CurrentUser = Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    if payload.works and payload.position not in facility.positions:
-        raise HTTPException(status_code=400, detail="Выберите должность из списка")
     # Keep the name the owner chose in the wizard; MAX profile name only for a new profile
     name = payload.name or ("" if audit.owner_employee(db, facility, include_archived=True) else user.full_name)
     try:
-        set_owner_works_shift(db, facility, payload.works, payload.position, name)
+        set_owner_works_shift(db, facility, payload.works, name)
     except ValueError as e:
         raise bad_request(e)
     return _state(db, facility)

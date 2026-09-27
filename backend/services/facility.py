@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from config import GEO_RADIUS_M
 from models import Employee, Facility
 from services import audit
-from services.checklist import CUSTOM_DUTY_BASE_ID, default_assignments
+from services.checklist import CUSTOM_DUTY_BASE_ID, OWNER_POSITION, default_assignments
 from services.shifts import active_shift, shift_stats
 from utils.generators import (
     generate_invite_token,
@@ -75,10 +75,9 @@ def add_employee(db: Session, facility: Facility, full_name: str, position: str)
 
 # The owner working shifts gets an employee profile bound to their MAX account
 # Name is applied when given; the profile is reused when the role is switched back on
-def set_owner_works_shift(db: Session, facility: Facility, works: bool, position: str | None, name: str) -> None:
+def set_owner_works_shift(db: Session, facility: Facility, works: bool, name: str) -> None:
     owner_emp = audit.owner_employee(db, facility, include_archived=True)
     if works:
-        position = _clean(position) or (facility.positions[0] if facility.positions else "Администратор")
         elsewhere = employee_of(db, facility.owner_user_id)
         if elsewhere and elsewhere.facility_id != facility.id:
             raise ValueError(f"Вы уже сотрудник в «{elsewhere.facility.name}» — одна учётная запись работает в одном заведении")
@@ -87,12 +86,12 @@ def set_owner_works_shift(db: Session, facility: Facility, works: bool, position
                 facility_id=facility.id,
                 personal_code=generate_unique_employee_code(db, facility.id),
                 full_name=_clean(name) or "Руководитель",
-                position=position,
+                position=OWNER_POSITION,
                 is_owner=True,
                 user_id=facility.owner_user_id,
             )
             db.add(owner_emp)
-        owner_emp.position = position
+        owner_emp.position = OWNER_POSITION
         owner_emp.user_id = facility.owner_user_id
         owner_emp.archived = False
         if name:
@@ -176,7 +175,6 @@ def save_setup(db: Session, facility: Facility, data: dict, owner_name: str) -> 
         db,
         facility,
         bool(data.get("owner_works_shift")),
-        data.get("owner_position"),
         data.get("owner_name") or owner_name,
     )
 
@@ -225,7 +223,6 @@ def facility_state(db: Session, facility: Facility, invite_url: str | None) -> d
         "custom_duties": facility.custom_duties,
         "reference_photos": facility.reference_photos,
         "owner_works_shift": owner_emp is not None,
-        "owner_position": owner_emp.position if owner_emp else None,
         "owner_name": owner_emp.full_name if owner_emp else None,
         "staff": [staff_to_dict(db, e) for e in staff],
         "summary": audit.summary(db, facility),

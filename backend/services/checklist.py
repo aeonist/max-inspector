@@ -53,18 +53,24 @@ def default_assignments(positions: list[str]) -> dict[str, str]:
     return result
 
 
-# Shift duties of a position: checklist items plus the owner's own duties
-def duties_for_position(facility, position: str) -> list[dict]:
+# Label of the owner's own staff profile: the owner may take any duty of the shift
+OWNER_POSITION = "Руководитель"
+
+
+# Shift duties of a position (all positions when None): checklist items plus the owner's own duties
+def duties_for_position(facility, position: str | None) -> list[dict]:
     assignments = facility.assignments
     features = facility.features
     duties = []
     for item in load_checklist():
         if not is_shift_item(item) or is_not_applicable(item, features):
             continue
-        if assignments.get(str(item["id"])) == position:
+        assigned = assignments.get(str(item["id"]))
+        if position is None or assigned == position:
             duties.append(
                 {
                     "id": item["id"],
+                    "position": assigned,
                     "zone": item.get("zone") or item.get("section"),
                     "question": item["question"],
                     "norm": item.get("norm", ""),
@@ -73,10 +79,11 @@ def duties_for_position(facility, position: str) -> list[dict]:
                 }
             )
     for duty in facility.custom_duties:
-        if duty.get("position") == position:
+        if position is None or duty.get("position") == position:
             duties.append(
                 {
                     "id": duty["id"],
+                    "position": duty.get("position"),
                     "zone": "Свои задачи",
                     "question": duty["question"],
                     "norm": "",
@@ -85,3 +92,8 @@ def duties_for_position(facility, position: str) -> list[dict]:
                 }
             )
     return duties
+
+
+# The owner on shift sees every duty; staff see their position's
+def duties_for_employee(employee) -> list[dict]:
+    return duties_for_position(employee.facility, None if employee.is_owner else employee.position)

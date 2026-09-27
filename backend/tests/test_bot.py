@@ -86,7 +86,6 @@ def _setup() -> dict:
         "name": "Кофейня Зерно",
         "positions": ["Повар", "Официант"],
         "owner_works_shift": True,
-        "owner_position": "Повар",
     }
 
 

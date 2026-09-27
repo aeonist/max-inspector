@@ -23,7 +23,6 @@ const Setup = {
       existing_staff: staff,
       new_staff: [],
       owner_works_shift: Boolean(state.owner_works_shift),
-      owner_position: state.owner_position || "",
       owner_name: state.owner_name || Bridge.userName || (App.me && App.me.user.name) || "",
       showDuties: false,
     };
@@ -62,7 +61,6 @@ const Setup = {
       custom_duties: d.custom_duties,
       new_staff: d.new_staff,
       owner_works_shift: d.owner_works_shift,
-      owner_position: d.owner_works_shift ? d.owner_position || d.positions[0] : null,
       owner_name: d.owner_name.trim() || null,
     };
   },
@@ -177,7 +175,7 @@ function setupStep2() {
       <label class="switch-row">
         <span>
           <strong>Я тоже работаю на смене</strong>
-          <span class="muted small">Получайте задачи своей должности и отмечайте смены сами — как все сотрудники.</span>
+          <span class="muted small">Отмечайте смены и берите любые задачи смены и нарушения — кто бы за них ни отвечал.</span>
         </span>
         <input id="fOwnerShift" type="checkbox" class="switch" ${raw(d.owner_works_shift ? "checked" : "")}>
       </label>
@@ -186,10 +184,6 @@ function setupStep2() {
           <span>Как вас подписывать</span>
           <input id="fOwnerName" type="text" maxlength="120" value="${d.owner_name}">
         </label>
-        <p class="muted small">Моя должность:</p>
-        <div class="chips chips-small">
-          ${d.positions.map((p) => chip(p, (d.owner_position || d.positions[0]) === p, "pickOwnerPosition"))}
-        </div>
       </div>
     </section>
     <div class="bottom-bar"><button type="button" class="btn btn-primary" data-act="setupNext2">Далее</button></div>`;
@@ -268,12 +262,6 @@ document.addEventListener("change", (e) => {
   Setup.draft.owner_works_shift = e.target.checked;
   document.getElementById("ownerShiftBox").hidden = !e.target.checked;
 });
-
-Actions.pickOwnerPosition = (el) => {
-  readStep2();
-  Setup.draft.owner_position = el.dataset.value;
-  el.parentElement.querySelectorAll(".chip").forEach((c) => c.classList.toggle("selected", c === el));
-};
 
 Actions.setupNext2 = () => {
   readStep2();
