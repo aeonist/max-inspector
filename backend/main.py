@@ -2,14 +2,15 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
+import max_bot.handlers  # noqa: F401 - register bot handlers
 from api import api_router
-from config import FRONTEND_DIR, UPLOADS_DIR
+from config import BOT_POLLING, FRONTEND_DIR, UPLOADS_DIR
 from database import init_db
 from max_bot import bot, dp
+from max_bot.instance import resolve_username
 
 # Setup basic logging
 logging.basicConfig(level=logging.INFO)
@@ -22,6 +23,10 @@ init_db()
 # Application lifespan context
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if not BOT_POLLING:
+        yield
+        return
+    await resolve_username()
     logger.info("Starting MAX Bot polling...")
     task = asyncio.create_task(dp.start_polling(bot))
 
@@ -42,14 +47,16 @@ async def lifespan(app: FastAPI):
 # Create FastAPI application
 app = FastAPI(title="МАХ-Инспектор API", lifespan=lifespan)
 
-# Setup CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+# The MAX WebView caches aggressively; make it revalidate the app shell
+@app.middleware("http")
+async def no_cache_app_shell(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/" or path.endswith((".html", ".js", ".css", ".json")):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 
 # Register API routes
 app.include_router(api_router)

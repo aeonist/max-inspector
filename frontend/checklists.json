@@ -19,7 +19,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Скан или скриншот квитанции о регистрации уведомления",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 2,
@@ -41,7 +42,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Титульный лист утверждённой ППК",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 3,
@@ -63,7 +65,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Разворот журнала с записями за текущую неделю",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 4,
@@ -85,7 +88,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Последний протокол лабораторных исследований",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 5,
@@ -107,7 +111,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Папка с товаросопроводительными документами за текущий месяц",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 6,
@@ -129,7 +134,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Утверждённая ТТК на одно из блюд меню",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 7,
@@ -151,7 +157,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Страница меню рядом с соответствующей ТТК",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 8,
@@ -173,7 +180,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Маркировка упаковки и накладная на принятую партию",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 9,
@@ -195,7 +203,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Термометр в продукции при приёмке",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 10,
@@ -217,7 +226,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Полка склада с видимой маркировкой условий хранения",
-    "reference_photo": null
+    "reference_photo": "img/reference/10_good.jpg",
+    "violation_example_photo": "img/reference/10_bad.jpg"
   },
   {
     "id": 11,
@@ -239,7 +249,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Термогигрометр на стене склада",
-    "reference_photo": null
+    "reference_photo": "img/reference/11_good.jpg",
+    "violation_example_photo": "img/reference/11_bad.jpg"
   },
   {
     "id": 12,
@@ -261,7 +272,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Журнал температуры и влажности склада с сегодняшней записью",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 13,
@@ -283,7 +295,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Внутренний вид холодильника с размещением продукции",
-    "reference_photo": null
+    "reference_photo": "img/reference/13_good.jpg",
+    "violation_example_photo": "img/reference/13_bad.jpg"
   },
   {
     "id": 14,
@@ -305,7 +318,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Термометр внутри холодильника с видимыми показаниями",
-    "reference_photo": null
+    "reference_photo": "img/reference/14_good.jpg",
+    "violation_example_photo": "img/reference/14_bad.jpg"
   },
   {
     "id": 15,
@@ -327,7 +341,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Журнал температурного режима с сегодняшней записью",
-    "reference_photo": null
+    "reference_photo": "img/reference/15_good.jpg",
+    "violation_example_photo": "img/reference/15_bad.jpg"
   },
   {
     "id": 16,
@@ -349,7 +364,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Показания термометра холодильника рядом с маркировкой продукции",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 17,
@@ -371,7 +387,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Маркировка продукции с датой окончания срока годности",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 18,
@@ -393,7 +410,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Вскрытая упаковка со стикером даты вскрытия",
-    "reference_photo": null
+    "reference_photo": "img/reference/18_good.jpg",
+    "violation_example_photo": "img/reference/18_bad.jpg"
   },
   {
     "id": 19,
@@ -415,7 +433,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Содержимое морозильной камеры",
-    "reference_photo": null
+    "reference_photo": "img/reference/19_good.jpg",
+    "violation_example_photo": "img/reference/19_bad.jpg"
   },
   {
     "id": 20,
@@ -437,7 +456,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Общий вид производственного помещения с обозначенными зонами",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 21,
@@ -459,7 +479,8 @@
     "default_role": null,
     "applies_to": "Заведение без цехового деления, работающее на полуфабрикатах",
     "photo_hint": "Рабочий стол, на котором обнаружено сырьё",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 22,
@@ -481,7 +502,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Разделочные доски и ножи в местах хранения",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 23,
@@ -503,7 +525,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Производственные столы с маркировкой назначения",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 24,
@@ -525,7 +548,8 @@
     "default_role": null,
     "applies_to": "Обработка сырья и изготовление полуфабрикатов в одном цехе",
     "photo_hint": "Обозначение зон в цехе",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 25,
@@ -547,7 +571,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Повреждённая посуда или тара без пищевой маркировки",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 26,
@@ -569,7 +594,8 @@
     "default_role": "Повар",
     "applies_to": "Используется фритюр",
     "photo_hint": "Фритюрница и журнал учёта фритюрных жиров",
-    "reference_photo": null
+    "reference_photo": "img/reference/26_good.jpg",
+    "violation_example_photo": "img/reference/26_bad.jpg"
   },
   {
     "id": 27,
@@ -591,7 +617,8 @@
     "default_role": "Повар",
     "applies_to": "Используются пищевые добавки",
     "photo_hint": "Пищевые добавки на месте хранения",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 28,
@@ -613,7 +640,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Термометр-щуп в блюде при раздаче",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 29,
@@ -635,7 +663,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Термометры, используемые на производстве",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 30,
@@ -657,7 +686,8 @@
     "default_role": "Официант",
     "applies_to": null,
     "photo_hint": "Гастроёмкость на раздаче с отметкой времени изготовления",
-    "reference_photo": null
+    "reference_photo": "img/reference/30_good.jpg",
+    "violation_example_photo": "img/reference/30_bad.jpg"
   },
   {
     "id": 31,
@@ -679,7 +709,8 @@
     "default_role": "Официант",
     "applies_to": null,
     "photo_hint": "Витрина с холодными блюдами и десертами",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 32,
@@ -701,7 +732,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Холодильник с готовыми блюдами (маркировка даты изготовления)",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 33,
@@ -723,7 +755,8 @@
     "default_role": "Официант",
     "applies_to": null,
     "photo_hint": "Стол в зале после уборки",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 34,
@@ -745,7 +778,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Страница меню с информацией об аллергенах",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 35,
@@ -767,7 +801,8 @@
     "default_role": "Повар",
     "applies_to": "Продажа на вынос или доставка",
     "photo_hint": "Упаковка для доставки с маркировкой «бокал и вилка»",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 36,
@@ -789,7 +824,8 @@
     "default_role": "Повар",
     "applies_to": "Продажа на вынос или доставка",
     "photo_hint": "Собранный заказ на доставку с отдельно упакованным соусом",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 37,
@@ -811,7 +847,8 @@
     "default_role": "Официант",
     "applies_to": "Есть кофемашина, автомат напитков или вендинг",
     "photo_hint": "Капучинатор и холдер кофемашины после чистки",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 38,
@@ -833,7 +870,8 @@
     "default_role": "Официант",
     "applies_to": null,
     "photo_hint": "Запас одноразовой посуды на раздаче",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 39,
@@ -855,7 +893,8 @@
     "default_role": "Уборщик",
     "applies_to": null,
     "photo_hint": "Моечное отделение с обозначением ванн",
-    "reference_photo": null
+    "reference_photo": "img/reference/39_good.jpg",
+    "violation_example_photo": "img/reference/39_bad.jpg"
   },
   {
     "id": 40,
@@ -877,7 +916,8 @@
     "default_role": "Уборщик",
     "applies_to": null,
     "photo_hint": "Панель посудомоечной машины с выбранным режимом",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 41,
@@ -899,7 +939,8 @@
     "default_role": "Уборщик",
     "applies_to": "Нет посудомоечной машины",
     "photo_hint": "Ванна с рабочим раствором и промаркированная ёмкость дезсредства",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 42,
@@ -921,7 +962,8 @@
     "default_role": "Уборщик",
     "applies_to": null,
     "photo_hint": "Стеллаж с чистой высушенной посудой",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 43,
@@ -943,7 +985,8 @@
     "default_role": "Уборщик",
     "applies_to": null,
     "photo_hint": "Производственное помещение после уборки",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 44,
@@ -965,7 +1008,8 @@
     "default_role": "Уборщик",
     "applies_to": null,
     "photo_hint": "Место хранения промаркированного уборочного инвентаря",
-    "reference_photo": null
+    "reference_photo": "img/reference/44_good.jpg",
+    "violation_example_photo": "img/reference/44_bad.jpg"
   },
   {
     "id": 45,
@@ -987,7 +1031,8 @@
     "default_role": "Уборщик",
     "applies_to": null,
     "photo_hint": "Отдельное место хранения инвентаря для туалета",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 46,
@@ -1009,7 +1054,8 @@
     "default_role": "Уборщик",
     "applies_to": null,
     "photo_hint": "Ёмкость с рабочим раствором и этикеткой",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 47,
@@ -1031,7 +1077,8 @@
     "default_role": "Уборщик",
     "applies_to": null,
     "photo_hint": "Инструкция по применению дезсредства на рабочем месте",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 48,
@@ -1053,7 +1100,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Шкаф для хранения моющих и дезсредств",
-    "reference_photo": null
+    "reference_photo": "img/reference/48_good.jpg",
+    "violation_example_photo": "img/reference/48_bad.jpg"
   },
   {
     "id": 49,
@@ -1075,7 +1123,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Свидетельство о госрегистрации дезсредства",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 50,
@@ -1097,7 +1146,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Страница медкнижки с действующими отметками (личные данные скрыть)",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 51,
@@ -1119,7 +1169,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Гигиенический журнал с записями за сегодня",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 52,
@@ -1141,7 +1192,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Гигиенический журнал и график смены",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 53,
@@ -1163,7 +1215,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Запись об отстранении в гигиеническом журнале",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 54,
@@ -1185,7 +1238,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Повар за порционированием в перчатках",
-    "reference_photo": null
+    "reference_photo": "img/reference/54_good.jpg",
+    "violation_example_photo": "img/reference/54_bad.jpg"
   },
   {
     "id": 55,
@@ -1207,7 +1261,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Гардероб персонала с раздельным хранением одежды",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 56,
@@ -1229,7 +1284,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Производственный цех без посторонних предметов",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 57,
@@ -1251,7 +1307,8 @@
     "default_role": "Повар",
     "applies_to": null,
     "photo_hint": "Раздача с работником в санитарной одежде",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 58,
@@ -1273,7 +1330,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Протокол исследования воды",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 59,
@@ -1295,7 +1353,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Водонагреватель в моечном отделении",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 60,
@@ -1317,7 +1376,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Вентиляционная решётка производственного помещения",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 61,
@@ -1339,7 +1399,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Вытяжной зонт над тепловым оборудованием",
-    "reference_photo": null
+    "reference_photo": "img/reference/61_good.jpg",
+    "violation_example_photo": "img/reference/61_bad.jpg"
   },
   {
     "id": 62,
@@ -1361,7 +1422,8 @@
     "default_role": null,
     "applies_to": "Готовятся холодные блюда, салаты, десерты или проводится порционирование",
     "photo_hint": "Бактерицидный рециркулятор в холодном цехе",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 63,
@@ -1383,7 +1445,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Светильник над рабочей зоной",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 64,
@@ -1405,7 +1468,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Стены и потолок производственного помещения",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 65,
@@ -1427,7 +1491,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Раковина для мытья рук в туалете с мылом и полотенцами",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 66,
@@ -1449,7 +1514,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Производственное помещение во время работы",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 67,
@@ -1471,7 +1537,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Подсобное помещение",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 68,
@@ -1493,7 +1560,8 @@
     "default_role": "Уборщик",
     "applies_to": null,
     "photo_hint": "Ёмкость для отходов с крышкой и пакетом",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 69,
@@ -1515,7 +1583,8 @@
     "default_role": "Уборщик",
     "applies_to": null,
     "photo_hint": "Угол производственного помещения, места возможного появления вредителей",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 70,
@@ -1537,7 +1606,8 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Договор и последний акт дезинсекции/дератизации",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   },
   {
     "id": 71,
@@ -1559,6 +1629,7 @@
     "default_role": null,
     "applies_to": null,
     "photo_hint": "Акт с указанием времени проведения обработки",
-    "reference_photo": null
+    "reference_photo": null,
+    "violation_example_photo": null
   }
 ]

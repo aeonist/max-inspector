@@ -1,0 +1,13 @@
+# Run everything locally: docker compose up --build -d
+services:
+  app:
+    build: .
+    env_file: .env
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - app-data:/data
+    restart: unless-stopped
+
+volumes:
+  app-data:

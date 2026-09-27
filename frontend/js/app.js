@@ -1,163 +1,107 @@
-// Main App Navigation and Entrypoint
+// Entry point: who is the user, and which screen to open
 
-// Ready MAX WebApp
-if (window.WebApp) {
-  window.WebApp.ready();
-}
+const App = { me: null, ownerState: null, invite: null };
 
-// Show specific screen
-function showScreen(screenId, pushHistory = true) {
-  const current = document.querySelector(".screen.active");
-  if (current && pushHistory && current.id !== screenId) {
-    appState.history.push(current.id);
-  }
-  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-  const target = document.getElementById(screenId);
-  if (target) target.classList.add("active");
+// First screen for someone without a role yet
+Screens.landing = {
+  async render() {
+    mount(
+      "#app",
+      html`<main class="screen landing">
+        <div class="logo">✓</div>
+        <h1>МАХ-Инспектор</h1>
+        <p class="lead">Порядок к проверке Роспотребнадзора: аудит по официальному проверочному листу и задачи смене с фото.</p>
+        <div class="stack">
+          <button type="button" class="next-step" data-act="becomeOwner">
+            <span class="next-num">🏪</span>
+            <span><strong>Я владелец или управляющий</strong><span class="muted">Настроить заведение и пройти аудит</span></span>
+          </button>
+          <button type="button" class="next-step" data-act="becomeStaff">
+            <span class="next-num">👩‍🍳</span>
+            <span><strong>Я сотрудник</strong><span class="muted">Подключиться к команде по QR-коду</span></span>
+          </button>
+        </div>
+        <button type="button" class="btn-link" data-act="tryDemo">Посмотреть на демо-кафе</button>
+        <p class="muted small">Демо — заполненное заведение с тестовыми данными: можно сразу пройти цикл «нарушение → исправление → принято». Удалить его можно в настройках.</p>
+      </main>`
+    );
+  },
+};
 
-  const backBtn = document.getElementById("globalBackBtn");
-  backBtn.disabled = (appState.history.length === 0 || screenId === "screenLanding" || screenId === "screenOwnerDashboard");
-}
+Actions.tryDemo = (el) =>
+  busy(el, async () => {
+    await api("POST", "/api/facility/demo");
+    App.me = await api("GET", "/api/me");
+    toast("Демо-кафе готово: загляните в «Ждут вашей проверки»", { type: "success", duration: 5000 });
+    await Router.go("home", {}, { reset: true });
+  });
 
-// Go back in navigation stack
-function navigateBack() {
-  if (appState.history.length > 0) {
-    const prev = appState.history.pop();
-    showScreen(prev, false);
-  }
-}
+Actions.becomeOwner = (el) =>
+  busy(el, async () => {
+    await api("POST", "/api/facility");
+    App.me = await api("GET", "/api/me");
+    Setup.draft = null;
+    await Router.go("setup", { step: 1 }, { reset: true });
+  });
 
-// Close WebApp and return to chat bot
-function closeWebAppAndReturnToBot() {
-  // 1. Try closing via native MAX WebApp SDK
+Actions.becomeStaff = () => Router.go("scan");
+
+// Opened outside the bot (no initData, no signed link)
+async function renderOpenFromBot() {
+  let username = "";
   try {
-    if (window.WebApp && typeof window.WebApp.close === "function") {
-      window.WebApp.close();
-    }
+    username = (await (await fetch("/api/bot")).json()).username || "";
   } catch (e) {
-    console.warn("WebApp.close error:", e);
+    username = "";
   }
-
-  // 2. Try window.close() if opened as a popup or separate window
-  try {
-    window.close();
-  } catch (e) {}
-
-  // 3. Fallback redirect: if window is still open after 80ms (e.g. desktop browser, iframe)
-  setTimeout(() => {
-    try {
-      window.location.href = "https://max.ru/t658_hakaton_max_bot";
-    } catch (e) {
-      window.open("https://max.ru/t658_hakaton_max_bot", "_self");
-    }
-  }, 80);
+  Actions.openBot = () => Bridge.openBot(username);
+  mount(
+    "#app",
+    html`<main class="screen landing">
+      <div class="logo">✓</div>
+      <h1>МАХ-Инспектор</h1>
+      <p class="lead">Откройте приложение из чата с ботом в MAX — так мы узнаем, что это вы.</p>
+      ${username ? html`<button type="button" class="btn btn-primary" data-act="openBot">Открыть чат с ботом</button>` : ""}
+    </main>`
+  );
 }
 
+function route(param) {
+  const me = App.me;
+  const opts = { reset: true };
+  if (param.startsWith("inv_")) return Router.go("join", { token: param.slice(4) }, opts);
+  if (param.startsWith("join_")) return Router.go("legacyJoin", {}, opts);
+  if (param === "scan" && !me.employee) return Router.go("scan", {}, opts);
+  if (param.startsWith("defect_") && me.employee) return Router.go("shift", { focus: Number(param.slice(7)) }, opts);
+  if ((param === "shift" || param === "checkin") && me.employee) return Router.go("shift", {}, opts);
+  if (me.owner) {
+    if (!me.owner.setup_done) return Router.go("setup", { step: 1 }, opts);
+    return Router.go("home", {}, opts);
+  }
+  if (me.employee) return Router.go("shift", {}, opts);
+  return Router.go("landing", {}, opts);
+}
 
-// Handle landing code submit
-function handleLandingCodeSubmit() {
-  const code = document.getElementById("landingFacilityCode").value.trim();
-  if (!code) {
-    alert("Введите номер заведения");
+async function boot() {
+  Bridge.ready();
+  Auth.init();
+  document.body.classList.toggle("is-mobile", Bridge.isMobile);
+  if (!Bridge.inMax && !Auth.token) {
+    await renderOpenFromBot();
     return;
   }
-  appState.facilityCode = code;
-  document.getElementById("empFacilityCode").value = code;
-  loadFacilityRosterForEmployee();
-  showScreen("screenEmployeeRegister");
+  mount("#app", skeleton(3));
+  try {
+    [App.me] = await Promise.all([api("GET", "/api/me"), Checklist.load()]);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) {
+      await renderOpenFromBot();
+    } else {
+      mount("#app", html`<main class="screen">${errorState(e, boot)}</main>`);
+    }
+    return;
+  }
+  await route(App.me.start_param || Auth.startParam || "");
 }
 
-// Application startup
-window.addEventListener("DOMContentLoaded", async () => {
-  await loadChecklists();
-
-  const urlParams = new URLSearchParams(window.location.search);
-  let role = urlParams.get("role") || localStorage.getItem("app_role");
-  let code = urlParams.get("code") || localStorage.getItem("app_code");
-  let userId = parseInt(urlParams.get("user_id")) || parseInt(localStorage.getItem("app_user_id")) || 0;
-  const mode = urlParams.get("mode");
-
-  appState.user_id = userId;
-  if (userId) localStorage.setItem("app_user_id", String(userId));
-
-  let facilityLoaded = false;
-  let setupDone = false;
-  if (code) {
-    appState.facilityCode = code;
-    try {
-      const data = await apiGetFacility(code);
-      appState.venue.name = data.name;
-      appState.venue.address = data.address || "";
-      appState.venue.lat = data.geo_lat;
-      appState.venue.lon = data.geo_lon;
-      appState.venue.geoRequired = data.geo_required;
-      if (data.positions && data.positions.length > 0) {
-        appState.positions = data.positions;
-      }
-      if (data.duties && data.duties.length > 0) {
-        appState.duties = data.duties;
-      }
-      if (data.audit_answers) {
-        appState.auditAnswers = data.audit_answers;
-      }
-      if (typeof data.audit_progress === "number") {
-        appState.auditProgress = data.audit_progress;
-      }
-      appState.backendStaff = data.staff || [];
-      // Setup wizard saves duties on finish, so their presence means the facility is configured
-      setupDone = Boolean(data.duties && data.duties.length > 0);
-      facilityLoaded = true;
-    } catch (e) {
-      console.warn("Facility not found, clearing stale storage:", e);
-      if (mode !== "new") {
-        code = null;
-        role = null;
-        appState.facilityCode = "";
-        localStorage.removeItem("app_code");
-        localStorage.removeItem("app_role");
-      }
-    }
-  }
-
-  if (role === "owner") {
-    appState.role = "owner";
-    localStorage.setItem("app_role", "owner");
-    if (!setupDone) {
-      openOwnerSetup();
-    } else {
-      await loadOwnerDashboard();
-      showScreen("screenOwnerDashboard");
-    }
-  } else if (role === "employee") {
-    appState.role = "employee";
-    localStorage.setItem("app_role", "employee");
-    if (userId) {
-      try {
-        const empData = await apiGetEmployee(userId);
-        appState.employee.name = empData.full_name;
-        appState.employee.position = empData.position;
-        appState.employee.facilityCode = empData.facility_code;
-        appState.employee.shiftStarted = Boolean(empData.shift_active);
-        appState.employee.shiftStartTime = empData.shift_started_at;
-        appState.employee.lastGeoDistance = empData.last_geo_distance;
-        appState.employee.completedTasks = empData.completed_tasks || [];
-        appState.employee.taskPhotos = empData.task_photos || {};
-      } catch (e) {
-        console.error("Failed to load employee on boot:", e);
-      }
-    }
-
-    if (appState.employee.name) {
-      renderEmployeeShiftScreen();
-      showScreen("screenEmployeeShift");
-    } else {
-      if (appState.facilityCode) {
-        document.getElementById("empFacilityCode").value = appState.facilityCode;
-        loadFacilityRosterForEmployee();
-      }
-      showScreen("screenEmployeeRegister");
-    }
-  } else {
-    showScreen("screenLanding");
-  }
-});
+window.addEventListener("DOMContentLoaded", boot);

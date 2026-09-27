@@ -1,0 +1,6 @@
+# Tests, linter and the deploy script (not needed to run the app)
+-r requirements.txt
+pytest==9.1.1
+httpx==0.28.1
+ruff==0.16.9
+paramiko==5.0.0

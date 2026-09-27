@@ -1,26 +1,31 @@
-from schemas.facility import (
-    AddStaffRequest,
-    DefectNotifyRequest,
-    FacilityAuditRequest,
-    FacilityAuthRequest,
-    FacilityUpdateRequest,
-    StaffItem,
-)
-from schemas.employee import (
-    EmployeeClaimRequest,
-    EmployeeRegisterRequest,
-    EmployeeTasksRequest,
+from schemas.requests import (
+    AnswerRequest,
+    CustomDuty,
+    DefectFixRequest,
+    DefectResolveRequest,
+    DefectReturnRequest,
+    EndShiftRequest,
+    NewStaff,
+    ProblemRequest,
+    SetupRequest,
+    ShiftRoleRequest,
+    StaffUpdateRequest,
+    StartShiftRequest,
+    TaskRequest,
 )
 
 __all__ = [
-    "StaffItem",
-    "FacilityUpdateRequest",
-    "FacilityAuthRequest",
-    "AddStaffRequest",
-    "FacilityAuditRequest",
-    "DefectNotifyRequest",
-    "EmployeeRegisterRequest",
-    "EmployeeClaimRequest",
-    "EmployeeTasksRequest",
+    "AnswerRequest",
+    "CustomDuty",
+    "DefectFixRequest",
+    "DefectResolveRequest",
+    "DefectReturnRequest",
+    "EndShiftRequest",
+    "NewStaff",
+    "ProblemRequest",
+    "SetupRequest",
+    "StartShiftRequest",
+    "ShiftRoleRequest",
+    "StaffUpdateRequest",
+    "TaskRequest",
 ]
-

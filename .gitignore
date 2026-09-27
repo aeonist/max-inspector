@@ -19,8 +19,9 @@ __pycache__/
 *$py.class
 *.so
 
-# Database
+# Database and uploaded photos
 *.db
+backend/uploads/
 *.sqlite
 *.sqlite3
 
@@ -48,3 +49,6 @@ Thumbs.db
 # Project-specific private/draft materials
 INFO/
 scratch/
+
+# Linter cache
+.ruff_cache/

@@ -6,7 +6,8 @@
 #   DEPLOY_USER     ssh user (default: root)
 #   DEPLOY_DIR      remote project dir (default: /opt/max-inspector)
 #   DEPLOY_SERVICE  systemd service name (default: max-inspector)
-#   DEPLOY_BIND_IP  optional local IP to connect from (to bypass a VPN route)
+#   DEPLOY_BIND_IP  optional local IP to connect from
+#   DEPLOY_IFACE    optional network interface to connect through, e.g. wlp5s0 (bypasses a VPN, Linux only)
 # Auth uses your SSH key (~/.ssh/id_ed25519 or ssh-agent). Set it up once:
 #   ssh-copy-id root@<DEPLOY_HOST>
 import logging
@@ -47,20 +48,26 @@ USER = os.getenv("DEPLOY_USER", "root")
 REMOTE_DIR = os.getenv("DEPLOY_DIR", "/opt/max-inspector")
 SERVICE = os.getenv("DEPLOY_SERVICE", "max-inspector")
 BIND_IP = os.getenv("DEPLOY_BIND_IP")
+IFACE = os.getenv("DEPLOY_IFACE")
 
 if not HOST:
     sys.exit("DEPLOY_HOST не задан. Добавьте в .env строку: DEPLOY_HOST=<ip сервера>")
 
 print(f"Connecting to {USER}@{HOST}...")
 sock = None
-if BIND_IP:
-    sock = socket.create_connection((HOST, 22), timeout=15, source_address=(BIND_IP, 0))
-
 client = paramiko.SSHClient()
 # Server must already be in ~/.ssh/known_hosts (it is after the first ssh/ssh-copy-id)
 client.load_system_host_keys()
 client.set_missing_host_key_policy(paramiko.RejectPolicy())
 try:
+    if IFACE:
+        # Route through a specific interface even when a VPN owns the default route
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, IFACE.encode())
+        sock.settimeout(15)
+        sock.connect((HOST, 22))
+    elif BIND_IP:
+        sock = socket.create_connection((HOST, 22), timeout=15, source_address=(BIND_IP, 0))
     client.connect(
         HOST, username=USER, sock=sock, timeout=15, banner_timeout=15,
         allow_agent=True, look_for_keys=True,
@@ -68,7 +75,7 @@ try:
 except paramiko.AuthenticationException:
     sys.exit(f"Вход по ключу не прошёл. Выполните один раз: ssh-copy-id {USER}@{HOST}")
 except (paramiko.SSHException, socket.timeout, TimeoutError, OSError) as e:
-    sys.exit(f"Сервер не отвечает ({e}). Если включён VPN — выключите его и повторите.")
+    sys.exit(f"Сервер не отвечает ({e}). Если включён VPN — выключите его или задайте DEPLOY_IFACE (например, wlp5s0).")
 
 
 def run_cmd(cmd):
