@@ -1,12 +1,15 @@
+import hmac
+import re
+
 from sqlalchemy.orm import Session
 
-from config import GEO_RADIUS_M
 from max_bot.instance import bot_username
 from models import Employee, Facility
 from services import audit
 from services.checklist import CUSTOM_DUTY_BASE_ID, OWNER_POSITION, default_assignments
 from services.shifts import active_shift, shift_stats
 from utils.generators import (
+    generate_checkin_token,
     generate_invite_token,
     generate_unique_employee_code,
     generate_unique_facility_code,
@@ -50,6 +53,26 @@ def invite_link(token: str) -> str | None:
     return f"https://max.ru/{username}?start=inv_{token}" if username else None
 
 
+# "Начало смены" QR: a bot deep link, so both the MAX scanner and a phone camera work
+def checkin_link(facility: Facility) -> str | None:
+    username = bot_username()
+    if not username or not facility.checkin_token:
+        return None
+    return f"https://max.ru/{username}?start=chk_{facility.checkin_token}"
+
+
+def reissue_checkin_token(db: Session, facility: Facility) -> None:
+    facility.checkin_token = generate_checkin_token()
+    db.commit()
+
+
+# Scanned text (link or bare token) matches the facility's current QR
+def checkin_code_valid(facility: Facility, scanned: str | None) -> bool:
+    match = re.search(r"chk_([\w-]+)", scanned or "")
+    token = match.group(1) if match else (scanned or "").strip()
+    return bool(facility.checkin_token) and hmac.compare_digest(token, facility.checkin_token)
+
+
 # The person who opened the invite becomes this employee; the link stops working
 def claim_invite(db: Session, emp: Employee, user_id: int) -> None:
     current = employee_of(db, user_id)
@@ -70,7 +93,7 @@ def create_facility(db: Session, owner_user_id: int) -> Facility:
         code=generate_unique_facility_code(db),
         name="Моё заведение",
         owner_user_id=owner_user_id,
-        geo_required=True,
+        qr_checkin=False,
         setup_done=False,
     )
     db.add(facility)
@@ -158,10 +181,9 @@ def active_staff(db: Session, facility: Facility) -> list[Employee]:
 def save_setup(db: Session, facility: Facility, data: dict, owner_name: str) -> None:
     facility.name = _clean(data.get("name")) or facility.name
     facility.address = _clean(data.get("address"), 300) or None
-    geo_required = bool(data.get("geo_required", True))
-    if geo_required and not facility.geo_required:
-        facility.geo_pending = not facility.has_coords
-    facility.geo_required = geo_required
+    facility.qr_checkin = bool(data.get("qr_checkin"))
+    if facility.qr_checkin and not facility.checkin_token:
+        facility.checkin_token = generate_checkin_token()
 
     positions = []
     for p in data.get("positions") or []:
@@ -204,10 +226,7 @@ def save_setup(db: Session, facility: Facility, data: dict, owner_name: str) -> 
         data.get("owner_name") or owner_name,
     )
 
-    was_setup = facility.setup_done
     facility.setup_done = True
-    if not was_setup and facility.geo_required and not facility.has_coords:
-        facility.geo_pending = True
     db.commit()
     audit.sync_features(db, facility)
 
@@ -224,8 +243,7 @@ def staff_to_dict(db: Session, emp: Employee) -> dict:
         "invited": bool(emp.invite_token),
         "on_shift": shift is not None,
         "shift_started": format_local_time(shift.started_at) if shift else None,
-        "geo_status": shift.geo_status if shift else None,
-        "geo_distance": shift.geo_distance if shift else None,
+        "checkin": shift.checkin if shift else None,
         "tasks_done": stats["done"] if stats else 0,
         "tasks_total": stats["total"] if stats else 0,
     }
@@ -241,9 +259,7 @@ def facility_state(db: Session, facility: Facility) -> dict:
         "name": facility.name,
         "address": facility.address or "",
         "setup_done": bool(facility.setup_done),
-        "geo_required": bool(facility.geo_required),
-        "has_coords": facility.has_coords,
-        "geo_radius_m": GEO_RADIUS_M,
+        "qr_checkin": bool(facility.qr_checkin),
         "positions": facility.positions,
         "features": facility.features,
         "assignments": facility.assignments,

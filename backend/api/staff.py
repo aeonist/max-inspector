@@ -8,12 +8,18 @@ from schemas import (
     DefectFixRequest,
     EndShiftRequest,
     ProblemRequest,
+    StartShiftRequest,
     TaskRequest,
 )
 from services import audit, notifier
 from services.auth import CurrentUser, current_user
 from services.checklist import duties_for_employee
-from services.facility import claim_invite, employee_by_invite, employee_of
+from services.facility import (
+    checkin_code_valid,
+    claim_invite,
+    employee_by_invite,
+    employee_of,
+)
 from services.shifts import (
     active_shift,
     close_shift,
@@ -66,12 +72,11 @@ def _shift_payload(db: Session, emp: Employee) -> dict:
     defects = [audit.defect_to_dict(d, facility) for d in audit.defects_for_employee(db, emp)]
     return {
         "employee": {"full_name": emp.full_name, "position": emp.position, "is_owner": bool(emp.is_owner)},
-        "facility": {"name": facility.name, "geo_required": bool(facility.geo_required)},
+        "facility": {"name": facility.name, "qr_checkin": bool(facility.qr_checkin)},
         "shift": (
             {
                 "started": format_local_time(shift.started_at),
-                "geo_status": shift.geo_status,
-                "geo_distance": shift.geo_distance,
+                "checkin": shift.checkin,
                 **shift_stats(db, emp, shift),
             }
             if shift
@@ -87,12 +92,13 @@ def get_shift(emp: Employee = Depends(get_employee), db: Session = Depends(get_d
     return _shift_payload(db, emp)
 
 
-# Without geo control the shift can start right from the mini-app
+# Start a shift: with QR check-in on, only by scanning the workplace QR (MAX camera scanner)
 @router.post("/shift/start")
-def start_shift(emp: Employee = Depends(get_employee), db: Session = Depends(get_db)):
-    if emp.facility.geo_required:
-        raise HTTPException(status_code=400, detail="Смена начинается в чате: отправьте геопозицию на месте")
-    open_shift(db, emp, "not_required")
+def start_shift(payload: StartShiftRequest | None = None, emp: Employee = Depends(get_employee), db: Session = Depends(get_db)):
+    facility = emp.facility
+    if facility.qr_checkin and not checkin_code_valid(facility, payload.code if payload else None):
+        raise HTTPException(status_code=403, detail="Это не QR «Начало смены» вашего заведения")
+    open_shift(db, emp, "qr" if facility.qr_checkin else "button")
     return _shift_payload(db, emp)
 
 

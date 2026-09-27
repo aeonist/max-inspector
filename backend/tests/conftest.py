@@ -19,7 +19,6 @@ os.environ.update(
         "BOT_TOKEN": "test-token",
         "BOT_USERNAME": "test_bot",
         "BOT_POLLING": "0",
-        "GEO_RADIUS_M": "150",
     }
 )
 
@@ -115,7 +114,7 @@ def facility(client, sent):
         json={
             "name": "Кофейня Зерно",
             "address": "Казань, ул. Баумана, 1",
-            "geo_required": False,
+            "qr_checkin": False,
             "positions": ["Повар", "Официант"],
             "features": ["Используется фритюр"],
             "new_staff": [

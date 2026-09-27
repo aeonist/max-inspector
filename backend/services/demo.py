@@ -20,7 +20,7 @@ from utils.timefmt import utcnow
 DEMO_SETUP = {
     "name": "Демо-кафе «Зерно»",
     "address": "Казань, ул. Баумана, 1 (тестовые данные)",
-    "geo_required": False,
+    "qr_checkin": False,
     "positions": ["Повар", "Бариста", "Официант", "Уборщик"],
     "features": [
         "Используется фритюр",

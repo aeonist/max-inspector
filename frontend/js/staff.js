@@ -166,12 +166,14 @@ function shiftView(data) {
       <h2>${data.employee.full_name}<span class="muted"> · ${isOwner ? "все задачи смены" : data.employee.position}</span></h2>
       ${isOwner ? html`<button type="button" class="btn-link small" data-act="ownerRoleMenu">Выйти из роли сотрудника</button>` : ""}
       ${shift
-        ? html`<p class="status status-green">Смена с ${shift.started}${shift.geo_status === "verified" ? " · 📍 на месте" : ""}${shift.geo_status === "no_coords" ? " · место не проверено" : ""}</p>`
+        ? html`<p class="status status-green">Смена с ${shift.started}${shift.checkin === "qr" ? " · по QR на месте" : ""}</p>`
         : html`<p class="status status-gray">Смена не начата</p>
-          ${data.facility.geo_required
-            ? html`<p class="muted small">Начните смену в чате с ботом: кнопка «Начать смену — я на месте» работает, когда вы в заведении.</p>
-              <button type="button" class="btn btn-primary" data-act="closeApp">Перейти в чат</button>`
-            : html`<button type="button" class="btn btn-primary" data-act="startShift">Начать смену</button>`}`}
+          ${!data.facility.qr_checkin
+            ? html`<button type="button" class="btn btn-primary" data-act="startShift">Начать смену</button>`
+            : Bridge.inMax
+              ? html`<p class="muted small">Отсканируйте QR «Начало смены» на рабочем месте.</p>
+                  <button type="button" class="btn btn-primary" data-act="scanCheckin">📷 Сканировать QR на месте</button>`
+              : html`<p class="muted small">Смена начинается по QR на рабочем месте: отсканируйте его в приложении MAX на телефоне или камерой телефона.</p>`}`}
     </section>
 
     ${urgent.length
@@ -265,6 +267,21 @@ function urgentCard(d) {
 Actions.startShift = (el) =>
   busy(el, async () => {
     await api("POST", "/api/shift/start");
+    Bridge.haptic("success");
+    toast("Смена начата ✓", { type: "success" });
+    await Router.refresh();
+  });
+
+// Workplace QR through the MAX scanner (camera only: no screenshot from the gallery)
+Actions.scanCheckin = (el) =>
+  busy(el, async () => {
+    let code;
+    try {
+      code = await Bridge.scanQR();
+    } catch (e) {
+      throw new ApiError("Не получилось отсканировать. Попробуйте ещё раз", 0);
+    }
+    await api("POST", "/api/shift/start", { code });
     Bridge.haptic("success");
     toast("Смена начата ✓", { type: "success" });
     await Router.refresh();

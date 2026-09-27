@@ -6,9 +6,6 @@ from database import SessionLocal
 from max_bot import handlers
 from models import Employee, Facility, Shift
 
-KAZAN = (55.7887, 49.1221)
-FAR_AWAY = (55.7558, 37.6173)  # Moscow
-
 
 def run(coro):
     return asyncio.run(coro)
@@ -27,38 +24,47 @@ def test_home_for_new_user_offers_roles(sent):
     assert "Кто вы?" in sent.to(555)[-1]["text"]
 
 
-def test_owner_location_sets_facility_place(client, facility, sent):
-    client.put("/api/owner/setup", headers=headers(OWNER), json={**_setup(), "geo_required": True})
-    run(handlers._handle_location(OWNER, *KAZAN))
-    fac = _facility()
-    assert (fac.geo_lat, fac.geo_lon) == KAZAN
-    assert "Место заведения сохранено" in sent.to(OWNER)[-2]["text"]
+def _qr_on(client) -> str:
+    state = client.put("/api/owner/setup", headers=headers(OWNER), json={**_setup(), "qr_checkin": True}).json()
+    assert state["qr_checkin"] is True
+    db = SessionLocal()
+    token = db.query(Facility).first().checkin_token
+    db.close()
+    return token
 
 
-def test_staff_far_away_cannot_open_shift(client, facility, sent):
-    client.put("/api/owner/setup", headers=headers(OWNER), json={**_setup(), "geo_required": True})
-    run(handlers._handle_location(OWNER, *KAZAN))
+def test_shift_starts_only_with_the_workplace_qr(client, facility, sent):
+    token = _qr_on(client)
     join(client, STAFF, "Мария Петрова")
+    h = headers(STAFF)
+    # Without a code or with a wrong one the shift does not start
+    assert client.post("/api/shift/start", headers=h).status_code == 403
+    assert client.post("/api/shift/start", headers=h, json={"code": "chk_wrong"}).status_code == 403
+    # The MAX scanner returns the QR text: the bot link with the token
+    res = client.post("/api/shift/start", headers=h, json={"code": f"https://max.ru/test_bot?start=chk_{token}"})
+    assert res.status_code == 200 and res.json()["shift"]["checkin"] == "qr"
 
-    run(handlers._handle_location(STAFF, *FAR_AWAY))
-    assert "Отправьте геопозицию, когда будете на месте" in sent.to(STAFF)[-1]["text"]
 
-    run(handlers._handle_location(STAFF, KAZAN[0] + 0.0005, KAZAN[1]))  # ~55 m away
+def test_phone_camera_scan_opens_shift_via_bot(client, facility, sent):
+    token = _qr_on(client)
+    join(client, STAFF, "Мария Петрова")
+    run(handlers._handle_payload(STAFF, "chk_wrong"))
+    assert "не QR «Начало смены»" in sent.to(STAFF)[-1]["text"]
+    run(handlers._handle_payload(STAFF, f"chk_{token}"))
     assert "Смена открыта" in sent.to(STAFF)[-1]["text"]
     db = SessionLocal()
     emp = db.query(Employee).filter(Employee.user_id == STAFF).one()
-    shift = db.query(Shift).filter(Shift.employee_id == emp.id).one()
-    assert shift.geo_status == "verified"
+    assert db.query(Shift).filter(Shift.employee_id == emp.id).one().checkin == "qr"
     db.close()
 
 
-def test_shift_without_facility_place_is_marked(client, facility, sent):
-    client.put("/api/owner/setup", headers=headers(OWNER), json={**_setup(), "geo_required": True})
+def test_reissued_qr_invalidates_the_old_one(client, facility):
+    old = _qr_on(client)
+    client.post("/api/owner/checkin/reissue", headers=headers(OWNER))
     join(client, STAFF, "Мария Петрова")
-    run(handlers._handle_location(STAFF, *FAR_AWAY))
-    assert "Место не проверено" in sent.to(STAFF)[-1]["text"]
-    # The owner is asked to mark the place instead of the bot pretending geo is off
-    assert "место заведения не отмечено" in sent.to(OWNER)[-1]["text"]
+    assert client.post("/api/shift/start", headers=headers(STAFF), json={"code": f"chk_{old}"}).status_code == 403
+    files = client.get("/api/owner/state", headers=headers(OWNER)).json()["files"]
+    assert client.get(files["checkin"]["url"]).content.startswith(b"%PDF")
 
 
 def test_personal_invite_via_deep_link(client, facility, sent):
@@ -79,7 +85,7 @@ def test_owner_home_shows_readiness_and_shift_button(client, facility, sent):
     assert "Готовность к проверке" in message["text"]
     labels = [row[0].text for row in message["attachments"][0].payload.buttons]
     assert "Открыть кабинет" in labels
-    assert "Начать смену" in labels  # geo is off in the fixture
+    assert "Начать смену" in labels  # QR check-in is off in the fixture
 
 
 def _setup() -> dict:

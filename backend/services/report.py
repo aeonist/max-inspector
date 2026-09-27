@@ -1,6 +1,6 @@
 import io
 
-from reportlab.graphics import renderSVG
+from reportlab.graphics import renderPDF, renderSVG
 from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.graphics.shapes import Drawing
 from reportlab.lib import colors
@@ -9,6 +9,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from sqlalchemy.orm import Session
 
@@ -162,3 +163,32 @@ def qr_svg(url: str, size: int = 240) -> str:
     svg = renderSVG.drawToString(_qr_drawing(url, size))
     # Drop the XML prolog and doctype so the markup can be inlined in HTML
     return svg[svg.index("<svg"):]
+
+
+# A4 sticker for the workplace: staff scan it to start a shift
+def build_checkin_pdf(facility: Facility, link: str) -> bytes:
+    _register_fonts()
+    buf = io.BytesIO()
+    width, height = A4
+    c = canvas.Canvas(buf, pagesize=A4)
+    c.setTitle(f"QR «Начало смены» — {facility.name}")
+    c.setFont("DejaVu-Bold", 28)
+    c.drawCentredString(width / 2, height - 40 * mm, "Начало смены")
+    c.setFont("DejaVu", 15)
+    name = facility.name[:40]
+    c.drawCentredString(width / 2, height - 52 * mm, name if "«" in name else f"«{name}»")
+    qr_size = 120 * mm
+    renderPDF.draw(_qr_drawing(link, qr_size), c, (width - qr_size) / 2, height - 60 * mm - qr_size)
+    c.setFont("DejaVu", 13)
+    y = height - 75 * mm - qr_size
+    for line in (
+        "Пришли на смену — отсканируйте этот код:",
+        "в МАХ-Инспекторе «Начать смену» или камерой телефона.",
+        "Повесьте на рабочем месте. Если код попал к посторонним —",
+        "перевыпустите его в настройках, старый перестанет работать.",
+    ):
+        c.drawCentredString(width / 2, y, line)
+        y -= 8 * mm
+    c.showPage()
+    c.save()
+    return buf.getvalue()

@@ -24,6 +24,8 @@ MIGRATIONS = {
         "reference_photos_json": "TEXT DEFAULT '{}'",
         "invite_token": "VARCHAR(32)",
         "geo_pending": "BOOLEAN DEFAULT 0",
+        "qr_checkin": "BOOLEAN DEFAULT 0",
+        "checkin_token": "VARCHAR(32)",
     },
     "employees": {
         "is_owner": "BOOLEAN DEFAULT 0",

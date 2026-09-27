@@ -137,14 +137,3 @@ async def send_problem(facility: Facility, defect: Defect, employee: Employee) -
     text = f"📣 {employee.full_name} ({employee.position}) сообщает о проблеме:\n{defect.comment or defect.title}"
     keyboard = keyboards.single_app_button("Открыть кабинет", facility.owner_user_id, "home")
     return await _send(facility.owner_user_id, text, [*_media(defect.before_photos[:CHAT_PHOTOS_PER_GROUP]), keyboard.as_markup()])
-
-
-# After the wizard: ask the owner for the facility location right in the chat
-async def send_facility_geo_request(facility: Facility) -> bool:
-    if not facility.owner_user_id:
-        return False
-    text = (
-        f"Заведение «{facility.name}» готово 🎉\n"
-        "Вы сейчас в заведении? Отправьте геопозицию — по ней сотрудники будут отмечать начало смены."
-    )
-    return await _send(facility.owner_user_id, text, [keyboards.facility_geo_request().as_markup()])

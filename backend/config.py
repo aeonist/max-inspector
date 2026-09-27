@@ -33,8 +33,6 @@ MINIAPP_MODE = os.getenv("MINIAPP_MODE", "link").strip().lower()
 # Start bot polling together with the API (disabled in tests)
 BOT_POLLING = os.getenv("BOT_POLLING", "1") == "1"
 
-# Shift check-in radius around the facility, meters
-GEO_RADIUS_M = int(os.getenv("GEO_RADIUS_M", "150"))
 # Shifts older than this are closed automatically
 SHIFT_MAX_HOURS = 12
 # Accept initData not older than this (the mini-app can stay open for a work day)

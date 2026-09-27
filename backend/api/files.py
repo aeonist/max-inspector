@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Facility
 from services.auth import verify_file_token
-from services.report import build_act_pdf
+from services.facility import checkin_link
+from services.report import build_act_pdf, build_checkin_pdf
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 
@@ -29,3 +30,12 @@ def _pdf(content: bytes, file_name: str) -> Response:
 def get_report(token: str, db: Session = Depends(get_db)):
     facility = _facility(db, token, "report")
     return _pdf(build_act_pdf(db, facility), f"Акт внутреннего аудита — {facility.name}.pdf")
+
+
+@router.get("/checkin/{token}.pdf")
+def get_checkin(token: str, db: Session = Depends(get_db)):
+    facility = _facility(db, token, "checkin")
+    link = checkin_link(facility)
+    if not link:
+        raise HTTPException(status_code=404, detail="Включите начало смены по QR в настройках")
+    return _pdf(build_checkin_pdf(facility, link), f"QR «Начало смены» — {facility.name}.pdf")

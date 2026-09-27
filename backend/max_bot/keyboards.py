@@ -5,7 +5,6 @@ from maxapi.types.attachments.buttons import (
     CallbackButton,
     LinkButton,
     OpenAppButton,
-    RequestGeoLocationButton,
 )
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
@@ -42,14 +41,14 @@ def role_choice() -> InlineKeyboardBuilder:
     return builder
 
 
-# With geo control the shift starts from a location sent via the native MAX button
-def start_shift_button(geo_required: bool):
-    if geo_required:
-        return RequestGeoLocationButton(text="Начать смену — я на месте", quick=True)
+# With QR check-in the shift starts from the MAX scanner in the mini-app
+def start_shift_button(user_id: int, qr_checkin: bool):
+    if qr_checkin:
+        return app_button("📷 Начать смену — QR на месте", user_id, "checkin")
     return CallbackButton(text="Начать смену", payload="start_shift")
 
 
-def owner_menu(user_id: int, setup_done: bool, shift_state: str | None, geo_required: bool) -> InlineKeyboardBuilder:
+def owner_menu(user_id: int, setup_done: bool, shift_state: str | None, qr_checkin: bool) -> InlineKeyboardBuilder:
     builder = InlineKeyboardBuilder()
     if not setup_done:
         builder.row(app_button("Продолжить настройку", user_id, "setup"))
@@ -57,22 +56,15 @@ def owner_menu(user_id: int, setup_done: bool, shift_state: str | None, geo_requ
     builder.row(app_button("Открыть кабинет", user_id, "home"))
     # Owner who also works shifts
     if shift_state == "off":
-        builder.row(start_shift_button(geo_required))
+        builder.row(start_shift_button(user_id, qr_checkin))
     elif shift_state == "on":
         builder.row(app_button("Моя смена", user_id, "shift"))
         builder.row(CallbackButton(text="Завершить смену", payload="end_shift"))
     return builder
 
 
-def facility_geo_request() -> InlineKeyboardBuilder:
-    builder = InlineKeyboardBuilder()
-    builder.row(RequestGeoLocationButton(text="Отправить геопозицию заведения", quick=True))
-    builder.row(CallbackButton(text="Позже", payload="geo_later"))
-    return builder
-
-
-def start_shift(geo_required: bool) -> InlineKeyboardBuilder:
-    return InlineKeyboardBuilder().row(start_shift_button(geo_required))
+def start_shift(user_id: int, qr_checkin: bool) -> InlineKeyboardBuilder:
+    return InlineKeyboardBuilder().row(start_shift_button(user_id, qr_checkin))
 
 
 def active_shift(user_id: int) -> InlineKeyboardBuilder:

@@ -23,21 +23,12 @@ def active_shift(db: Session, employee: Employee) -> Shift | None:
     return shift
 
 
-# Open a shift; a repeated check-in during a shift keeps its progress
-def open_shift(db: Session, employee: Employee, geo_status: str, distance: float | None = None) -> tuple[Shift, bool]:
+# Open a shift ("qr" or "button"); a repeated check-in during a shift keeps its progress
+def open_shift(db: Session, employee: Employee, checkin: str) -> tuple[Shift, bool]:
     shift = active_shift(db, employee)
     if shift:
-        if distance is not None:
-            shift.geo_distance = distance
-            shift.geo_status = geo_status
-            db.commit()
         return shift, False
-    shift = Shift(
-        employee_id=employee.id,
-        facility_id=employee.facility_id,
-        geo_status=geo_status,
-        geo_distance=distance,
-    )
+    shift = Shift(employee_id=employee.id, facility_id=employee.facility_id, checkin=checkin)
     db.add(shift)
     db.commit()
     return shift, True

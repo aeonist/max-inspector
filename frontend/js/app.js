@@ -73,7 +73,7 @@ function route(param) {
   if (param.startsWith("join_")) return Router.go("legacyJoin", {}, opts);
   if (param === "scan" && !me.employee) return Router.go("scan", {}, opts);
   if (param.startsWith("defect_") && me.employee) return Router.go("shift", { focus: Number(param.slice(7)) }, opts);
-  if (param === "shift" && me.employee) return Router.go("shift", {}, opts);
+  if ((param === "shift" || param === "checkin") && me.employee) return Router.go("shift", {}, opts);
   if (me.owner) {
     if (!me.owner.setup_done) return Router.go("setup", { step: 1 }, opts);
     return Router.go("home", {}, opts);

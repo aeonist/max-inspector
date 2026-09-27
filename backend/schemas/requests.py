@@ -15,7 +15,7 @@ class CustomDuty(BaseModel):
 class SetupRequest(BaseModel):
     name: str = Field(max_length=120)
     address: str | None = Field(default=None, max_length=300)
-    geo_required: bool = True
+    qr_checkin: bool = False
     positions: list[str] = []
     features: list[str] = []
     assignments: dict[str, str] = {}
@@ -59,6 +59,11 @@ class DefectFixRequest(BaseModel):
 class TaskRequest(BaseModel):
     done: bool
     photos: list[str] = Field(default=[], max_length=10)
+
+
+class StartShiftRequest(BaseModel):
+    # Text of the scanned "Начало смены" QR
+    code: str | None = Field(default=None, max_length=300)
 
 
 class EndShiftRequest(BaseModel):

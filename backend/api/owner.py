@@ -23,6 +23,7 @@ from services.facility import (
     ensure_employee_invite,
     facility_state,
     invite_link,
+    reissue_checkin_token,
     save_setup,
     set_owner_works_shift,
     staff_to_dict,
@@ -44,6 +45,10 @@ def _file_links(facility: Facility) -> dict:
         "report": {
             "url": f"/api/files/report/{make_file_token('report', facility.id, FILE_LINK_TTL_S)}.pdf",
             "file_name": f"Акт внутреннего аудита — {facility.name}.pdf",
+        },
+        "checkin": {
+            "url": f"/api/files/checkin/{make_file_token('checkin', facility.id, FILE_LINK_TTL_S)}.pdf",
+            "file_name": f"QR «Начало смены» — {facility.name}.pdf",
         },
     }
 
@@ -81,13 +86,10 @@ async def put_setup(
     user: CurrentUser = Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    first_time = not facility.setup_done
     try:
         save_setup(db, facility, payload.model_dump(), user.full_name)
     except ValueError as e:
         raise bad_request(e)
-    if first_time and facility.geo_required and not facility.has_coords:
-        await notifier.send_facility_geo_request(facility)
     return _state(db, facility)
 
 
@@ -108,16 +110,15 @@ def put_shift_role(
     return _state(db, facility)
 
 
-# Ask the owner for the facility location in the chat (new place or first time)
-@router.post("/geo/request")
-async def request_geo(facility: Facility = Depends(get_owner_facility), db: Session = Depends(get_db)):
-    facility.geo_pending = True
-    db.commit()
-    sent = await notifier.send_facility_geo_request(facility)
-    return {"sent": sent}
+# New "Начало смены" QR: the old sticker stops working (e.g. a photo of it left the kitchen)
+@router.post("/checkin/reissue")
+def reissue_checkin(facility: Facility = Depends(get_owner_facility), db: Session = Depends(get_db)):
+    if not facility.qr_checkin:
+        raise HTTPException(status_code=400, detail="Начало смены по QR выключено")
+    reissue_checkin_token(db, facility)
+    return _state(db, facility)
 
 
-# "Delete and start over" (e.g. after the demo cafe); history is kept
 @router.delete("/facility")
 def delete_facility(facility: Facility = Depends(get_owner_facility), db: Session = Depends(get_db)):
     detach_facility(db, facility)

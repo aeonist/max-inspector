@@ -33,6 +33,11 @@ def generate_unique_employee_code(db: Session, facility_id: int) -> str:
             return candidate
 
 
+# Secret of the facility's "Начало смены" QR
+def generate_checkin_token() -> str:
+    return secrets.token_urlsafe(12)
+
+
 # Unguessable token for a personal staff invite
 def generate_invite_token(db: Session) -> str:
     while True:

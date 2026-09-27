@@ -5,10 +5,8 @@ from maxapi import F
 from maxapi.enums.chat_type import ChatType
 from maxapi.filters.command import CommandStart
 from maxapi.types import BotStarted, MessageCallback, MessageCreated
-from maxapi.types.attachments.location import Location
 from sqlalchemy.orm import Session
 
-from config import GEO_RADIUS_M
 from database import SessionLocal
 from max_bot import keyboards
 from max_bot.instance import bot, dp
@@ -16,6 +14,7 @@ from models import Defect, Employee, Facility
 from services import audit, notifier
 from services.demo import start_demo
 from services.facility import (
+    checkin_code_valid,
     claim_invite,
     create_facility,
     employee_by_invite,
@@ -23,7 +22,6 @@ from services.facility import (
     owner_facility,
 )
 from services.shifts import active_shift, close_shift, open_shift, shift_stats
-from utils.geo import calculate_distance
 from utils.timefmt import format_local_time
 
 logger = logging.getLogger(__name__)
@@ -51,7 +49,7 @@ def _home(db: Session, user_id: int) -> tuple[str, object]:
     if fac:
         if not fac.setup_done:
             text = f"Продолжим настройку «{fac.name}»: название, команда и обязанности — около 5 минут."
-            return text, keyboards.owner_menu(user_id, False, None, fac.geo_required)
+            return text, keyboards.owner_menu(user_id, False, None, fac.qr_checkin)
         summary = audit.summary(db, fac)
         lines = [f"«{fac.name}»", f"Готовность к проверке: {summary['index']}%"]
         if summary["review"]:
@@ -62,7 +60,7 @@ def _home(db: Session, user_id: int) -> tuple[str, object]:
             shift_state = "on" if shift else "off"
             if shift:
                 lines.append(f"Ваша смена открыта в {format_local_time(shift.started_at)}.")
-        return "\n".join(lines), keyboards.owner_menu(user_id, True, shift_state, fac.geo_required)
+        return "\n".join(lines), keyboards.owner_menu(user_id, True, shift_state, fac.qr_checkin)
 
     if emp:
         fac = emp.facility
@@ -77,9 +75,9 @@ def _home(db: Session, user_id: int) -> tuple[str, object]:
             if urgent:
                 lines.append(f"Срочно исправить: {urgent}")
             return "\n".join(lines), keyboards.active_shift(user_id)
-        how = "отправьте геопозицию на месте" if fac.geo_required else "нажмите кнопку ниже"
+        how = "отсканируйте QR «Начало смены» на рабочем месте" if fac.qr_checkin else "нажмите кнопку ниже"
         text = f"«{fac.name}» · {emp.full_name}, {emp.position}\nЧтобы начать смену, {how}."
-        return text, keyboards.start_shift(fac.geo_required)
+        return text, keyboards.start_shift(user_id, fac.qr_checkin)
 
     text = (
         "МАХ-Инспектор помогает кафе держать порядок к проверке Роспотребнадзора: "
@@ -126,9 +124,11 @@ async def _legacy_join(user_id: int) -> None:
 
 
 async def _handle_payload(user_id: int, payload: str) -> None:
-    match = re.search(r"(inv|join)_([\w-]+)", payload)
+    match = re.search(r"(inv|join|chk)_([\w-]+)", payload)
     if match and match.group(1) == "inv":
         await _handle_invite(user_id, match.group(2))
+    elif match and match.group(1) == "chk":
+        await _handle_checkin(user_id, payload)
     elif match:
         await _legacy_join(user_id)
     else:
@@ -226,44 +226,22 @@ async def callback_accept_invite(callback: MessageCallback):
         await _reply(
             user_id,
             f"Готово! Вы в команде «{fac.name}»: {emp.full_name}, {emp.position}.",
-            keyboards.start_shift(fac.geo_required),
+            keyboards.start_shift(user_id, fac.qr_checkin),
         )
     finally:
         db.close()
 
 
-@dp.message_callback(F.callback.payload == "geo_later")
-async def callback_geo_later(callback: MessageCallback):
-    await callback.ack()
-    await _reply(
-        callback.callback.user.user_id,
-        "Хорошо. Пока место не отмечено, смены открываются с пометкой «место не проверено». "
-        "Отправить геопозицию можно в любой момент: кабинет → Настройки.",
-    )
-
-
 # Open a shift and tell the employee what is next
-async def _start_shift(db: Session, user_id: int, emp: Employee, geo_status: str, distance: float | None) -> None:
-    fac = emp.facility
-    shift, created = open_shift(db, emp, geo_status, distance)
+async def _start_shift(db: Session, user_id: int, emp: Employee, checkin: str) -> None:
+    shift, _ = open_shift(db, emp, checkin)
     stats = shift_stats(db, emp, shift)
-    lines = [f"Смена открыта в {format_local_time(shift.started_at)} ✅"]
-    if geo_status == "verified":
-        lines[0] += f" · {round(distance)} м от заведения"
-    elif geo_status == "no_coords":
-        lines.append("Место не проверено: руководитель ещё не отметил заведение на карте.")
+    lines = [f"Смена открыта в {format_local_time(shift.started_at)} ✅" + (" · по QR на месте" if checkin == "qr" else "")]
     lines.append(f"Задач на смену: {stats['total']}.")
     urgent = _urgent_count(db, emp)
     if urgent:
         lines.append(f"Срочно исправить: {urgent}.")
     await _reply(user_id, "\n".join(lines), keyboards.active_shift(user_id))
-    if created and geo_status == "no_coords" and fac.owner_user_id and fac.owner_user_id != user_id:
-        await _reply(
-            fac.owner_user_id,
-            f"{emp.full_name} открыл(а) смену, но место заведения не отмечено — проверить присутствие нельзя. "
-            "Отправьте геопозицию, когда будете в заведении.",
-            keyboards.facility_geo_request(),
-        )
 
 
 @dp.message_callback(F.callback.payload == "start_shift")
@@ -276,10 +254,26 @@ async def callback_start_shift(callback: MessageCallback):
         if not emp:
             await _send_home(user_id)
             return
-        if emp.facility.geo_required:
-            await _reply(user_id, "Для начала смены отправьте геопозицию на месте.", keyboards.start_shift(True))
+        if emp.facility.qr_checkin:
+            await _reply(user_id, "Смена начинается по QR на рабочем месте.", keyboards.start_shift(user_id, True))
             return
-        await _start_shift(db, user_id, emp, "not_required", None)
+        await _start_shift(db, user_id, emp, "button")
+    finally:
+        db.close()
+
+
+# "Начало смены" QR scanned by a phone camera: https://max.ru/<bot>?start=chk_<token>
+async def _handle_checkin(user_id: int, scanned: str) -> None:
+    db = SessionLocal()
+    try:
+        emp = employee_of(db, user_id)
+        if not emp:
+            await _reply(user_id, "Сначала подключитесь к заведению по личному приглашению руководителя.")
+            return
+        if not checkin_code_valid(emp.facility, scanned):
+            await _reply(user_id, "Это не QR «Начало смены» вашего заведения или он устарел. Спросите у руководителя новый.")
+            return
+        await _start_shift(db, user_id, emp, "qr")
     finally:
         db.close()
 
@@ -306,7 +300,7 @@ async def callback_end_shift(callback: MessageCallback):
         text = f"Смена завершена в {format_local_time(shift.ended_at)}.\nВыполнено {stats['done']} из {stats['total']}"
         if stats["fixed"]:
             text += f", исправлено нарушений: {stats['fixed']}"
-        await _reply(user_id, text + ". Спасибо!", keyboards.start_shift(emp.facility.geo_required))
+        await _reply(user_id, text + ". Спасибо!", keyboards.start_shift(user_id, emp.facility.qr_checkin))
     finally:
         db.close()
 
@@ -384,58 +378,11 @@ async def callback_return_reason(callback: MessageCallback):
         db.close()
 
 
-# Location: the facility's place (owner) or a shift check-in (staff)
-async def _handle_location(user_id: int, lat: float, lon: float) -> None:
-    db = SessionLocal()
-    try:
-        fac = owner_facility(db, user_id)
-        if fac and fac.geo_required and (not fac.has_coords or fac.geo_pending):
-            fac.geo_lat, fac.geo_lon, fac.geo_pending = lat, lon, False
-            db.commit()
-            await _reply(
-                user_id,
-                f"📍 Место заведения сохранено. Сотрудники смогут начать смену в радиусе {GEO_RADIUS_M} м.",
-            )
-            await _send_home(user_id)
-            return
-
-        emp = employee_of(db, user_id)
-        if not emp:
-            if fac:
-                await _reply(user_id, "Место заведения уже сохранено. Изменить его можно в кабинете → Настройки.")
-            else:
-                await _reply(user_id, "Сначала подключитесь к заведению: отсканируйте QR или откройте ссылку руководителя.")
-            return
-
-        work = emp.facility
-        if not work.geo_required:
-            await _start_shift(db, user_id, emp, "not_required", None)
-        elif not work.has_coords:
-            await _start_shift(db, user_id, emp, "no_coords", None)
-        else:
-            distance = calculate_distance(lat, lon, work.geo_lat, work.geo_lon)
-            if distance > GEO_RADIUS_M:
-                await _reply(
-                    user_id,
-                    f"Вы в {round(distance)} м от «{work.name}». Отправьте геопозицию, когда будете на месте.",
-                    keyboards.start_shift(True),
-                )
-                return
-            await _start_shift(db, user_id, emp, "verified", distance)
-    finally:
-        db.close()
-
-
-# Any other message: location, or a friendly fallback instead of silence
+# Any other message: a friendly fallback instead of silence
 @dp.message_created()
 async def handle_incoming_message(event: MessageCreated):
     if not _is_dialog(event.message) or not event.message.sender:
         return
     user_id = event.message.sender.user_id
-    body = event.message.body
-    for att in (body.attachments or []) if body else []:
-        if isinstance(att, Location) and att.latitude is not None and att.longitude is not None:
-            await _handle_location(user_id, att.latitude, att.longitude)
-            return
     await _reply(user_id, "Не понял 🙂 Вот что можно сделать сейчас:")
     await _send_home(user_id)

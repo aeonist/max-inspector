@@ -6,7 +6,7 @@ def test_demo_cafe_has_the_whole_cycle_ready(client, sent):
     assert client.post("/api/facility/demo", headers=h).status_code == 200
     state = client.get("/api/owner/state", headers=h).json()
 
-    assert state["geo_required"] is False  # passable from the web version of MAX
+    assert state["qr_checkin"] is False  # passable from the web version of MAX
     assert "тестовые данные" in state["address"]
     assert state["owner_works_shift"] is True
     statuses = sorted(d["status"] for d in state["defects"])

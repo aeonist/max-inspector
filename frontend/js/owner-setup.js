@@ -15,7 +15,7 @@ const Setup = {
     this.draft = {
       name: state.setup_done || state.name !== "Моё заведение" ? state.name : "",
       address: state.address || "",
-      geo_required: state.geo_required !== false,
+      qr_checkin: Boolean(state.qr_checkin),
       positions: state.positions && state.positions.length ? [...state.positions] : [...DEFAULT_POSITIONS],
       features: [...(state.features || [])],
       assignments: { ...(state.assignments || {}) },
@@ -54,7 +54,7 @@ const Setup = {
     return {
       name: d.name.trim(),
       address: d.address.trim() || null,
-      geo_required: d.geo_required,
+      qr_checkin: d.qr_checkin,
       positions: d.positions,
       features: d.features,
       assignments,
@@ -106,10 +106,10 @@ function setupStep1() {
     <section class="card">
       <label class="switch-row">
         <span>
-          <strong>Отмечать смены по геопозиции</strong>
-          <span class="muted small">Сотрудник начинает смену кнопкой в чате MAX и только находясь в заведении. Место отметите одной кнопкой в чате после настройки.</span>
+          <strong>Начало смены по QR на рабочем месте</strong>
+          <span class="muted small">Повесьте QR на кухне: сотрудник открывает смену, сканируя его в MAX, — из дома не отметиться. QR распечатаете после настройки. В веб-версии MAX сканера может не быть.</span>
         </span>
-        <input id="fGeo" type="checkbox" class="switch" ${raw(d.geo_required ? "checked" : "")}>
+        <input id="fQr" type="checkbox" class="switch" ${raw(d.qr_checkin ? "checked" : "")}>
       </label>
     </section>
     ${Setup.editing
@@ -122,7 +122,7 @@ Actions.setupNext1 = () => {
   const d = Setup.draft;
   d.name = document.getElementById("fName").value;
   d.address = document.getElementById("fAddress").value;
-  d.geo_required = document.getElementById("fGeo").checked;
+  d.qr_checkin = document.getElementById("fQr").checked;
   if (!d.name.trim()) {
     toast("Как называется заведение?", { type: "error" });
     document.getElementById("fName").focus();
@@ -439,14 +439,18 @@ Actions.setupFinish = (el) =>
 Screens.setupDone = {
   async render() {
     const state = App.ownerState || (await api("GET", "/api/owner/state"));
-    const needsGeo = state.geo_required && !state.has_coords;
     mount(
       "#app",
       html`<main class="screen done-screen">
         <div class="done-icon">🎉</div>
         <h1>Готово!</h1>
         <p class="lead">«${state.name}» настроено. Осталось два шага:</p>
-        ${needsGeo ? html`<p class="notice">📍 Мы отправили в чат кнопку — отметьте заведение на карте, когда будете на месте.</p>` : ""}
+        ${state.qr_checkin
+          ? html`<div class="notice">
+              <p>📷 Распечатайте QR «Начало смены» и повесьте на рабочем месте — по нему сотрудники будут открывать смену.</p>
+              <button type="button" class="btn btn-small btn-secondary" data-act="downloadCheckin">Скачать QR (PDF)</button>
+            </div>`
+          : ""}
         <button type="button" class="next-step" data-act="goInvite">
           <span class="next-num">1</span>
           <span><strong>Пригласите команду</strong><span class="muted">Каждому — личная ссылка в MAX</span></span>

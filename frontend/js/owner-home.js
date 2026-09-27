@@ -36,13 +36,6 @@ function homeView(state) {
   else if (s.answered === s.total) auditButton = "Итоги аудита";
 
   return html`${roleTabs("home")}
-    ${state.geo_required && !state.has_coords
-      ? html`<div class="notice">
-          <p>📍 Отметьте заведение на карте — тогда смены будут открываться только на месте.</p>
-          <button type="button" class="btn btn-small btn-secondary" data-act="requestGeo">Отправить кнопку в чат</button>
-        </div>`
-      : ""}
-
     <section class="card center">
       ${readinessRing(s)}
       ${readinessTodo(s, review.length, mine.length, team.length)}
@@ -130,7 +123,7 @@ function shiftNowSection(state) {
       ${people.map(
         (p) => html`<li class="person">
           <span><strong>${p.full_name}</strong>${p.is_owner ? " (вы)" : ""}
-            <span class="muted small block">${p.position}${p.on_shift ? html` · с ${p.shift_started}${geoNote(p)}` : ""}</span></span>
+            <span class="muted small block">${p.position}${p.on_shift ? html` · с ${p.shift_started}${p.checkin === "qr" ? " · по QR" : ""}` : ""}</span></span>
           ${p.on_shift
             ? html`<span class="person-right"><span class="badge badge-ok">на смене</span><span class="small muted">задачи ${p.tasks_done}/${p.tasks_total}</span></span>`
             : html`<span class="badge">${p.linked ? "не на смене" : "не в MAX"}</span>`}
@@ -166,12 +159,6 @@ Actions.teamDefect = (el) => {
   );
 };
 
-function geoNote(person) {
-  if (person.geo_status === "verified") return html` · 📍 на месте`;
-  if (person.geo_status === "no_coords") return html` · <span class="warn">место не проверено</span>`;
-  return "";
-}
-
 function reviewCard(d) {
   return html`<article class="card defect-card">
     <p class="muted small">${d.fixed_by ? html`${d.fixed_by} · ` : ""}${d.fixed_at || ""}</p>
@@ -204,11 +191,25 @@ function ownerTaskCard(d) {
 Actions.goSettings = () => Router.go("settings");
 Actions.goAuditSummary = () => Router.go("auditSummary");
 
-Actions.requestGeo = (el) =>
+// Printable "Начало смены" QR for the workplace
+Actions.downloadCheckin = (el) =>
   busy(el, async () => {
-    await api("POST", "/api/owner/geo/request");
-    toast("Отправили кнопку в чат. Нажмите её, когда будете в заведении", { type: "success" });
+    const state = App.ownerState || (await api("GET", "/api/owner/state"));
+    await Bridge.download(state.files.checkin.url, state.files.checkin.file_name);
   });
+
+Actions.reissueCheckin = async (el) => {
+  const ok = await confirmSheet(
+    "Перевыпустить QR?",
+    "Старый QR перестанет работать — например, если его сфотографировали и унесли. Новый нужно распечатать и повесить вместо старого.",
+    "Перевыпустить"
+  );
+  if (!ok) return;
+  await busy(el, async () => {
+    App.ownerState = await api("POST", "/api/owner/checkin/reissue");
+    toast("Новый QR готов — распечатайте его", { type: "success", action: { label: "Скачать", fn: () => Actions.downloadCheckin(el) } });
+  });
+};
 
 Actions.acceptFix = (el) =>
   busy(el, async () => {
@@ -359,10 +360,13 @@ function settingsView(state) {
   return html`<section class="card">
       <h2>${state.name}</h2>
       <p class="muted">${state.address || "Адрес не указан"}</p>
-      <p class="small">Геопозиция смен: ${state.geo_required ? (state.has_coords ? `включена, радиус ${state.geo_radius_m} м` : "включена, место не отмечено") : "выключена"}</p>
+      <p class="small">Начало смены: ${state.qr_checkin ? "по QR на рабочем месте" : "кнопкой, без QR"}</p>
       <div class="stack">
         <button type="button" class="btn btn-secondary" data-act="editSetup">Изменить название, должности и обязанности</button>
-        ${state.geo_required ? html`<button type="button" class="btn btn-secondary" data-act="requestGeo">${state.has_coords ? "Обновить место на карте" : "Отметить место на карте"}</button>` : ""}
+        ${state.qr_checkin
+          ? html`<button type="button" class="btn btn-secondary" data-act="downloadCheckin">🖨 QR «Начало смены» (PDF)</button>
+              <button type="button" class="btn btn-secondary" data-act="reissueCheckin">Перевыпустить QR</button>`
+          : ""}
       </div>
     </section>
 

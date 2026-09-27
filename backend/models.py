@@ -44,11 +44,9 @@ class Facility(Base):
     inn = Column(String(12), unique=True, index=True, nullable=True)
     name = Column(String(255), default="Моё заведение", nullable=False)
     address = Column(String(500), nullable=True)
-    geo_lat = Column(Float, nullable=True)
-    geo_lon = Column(Float, nullable=True)
-    geo_required = Column(Boolean, default=True)
-    # Waiting for the owner to send the facility location in the bot chat
-    geo_pending = Column(Boolean, default=False)
+    # Shift starts by scanning the "Начало смены" QR at the workplace
+    qr_checkin = Column(Boolean, default=False)
+    checkin_token = Column(String(32), nullable=True)
     owner_user_id = Column(Integer, index=True, nullable=True)
     setup_done = Column(Boolean, default=False)
     invite_token = Column(String(32), unique=True, index=True, nullable=True)
@@ -70,6 +68,10 @@ class Facility(Base):
     risk_category = Column(String(50), default="")
     audit_answers_json = Column(Text, default="{}")
     audit_progress = Column(Integer, default=0)
+    geo_lat = Column(Float, nullable=True)
+    geo_lon = Column(Float, nullable=True)
+    geo_required = Column(Boolean, default=False)
+    geo_pending = Column(Boolean, default=False)
 
     employees = relationship("Employee", back_populates="facility")
     sessions = relationship("InspectionSession", back_populates="facility")
@@ -116,9 +118,6 @@ class Facility(Base):
     def reference_photos(self, value: dict):
         self.reference_photos_json = _dump(value)
 
-    @property
-    def has_coords(self) -> bool:
-        return self.geo_lat is not None and self.geo_lon is not None
 
 
 # Employee model (the owner gets one too when working shifts)
@@ -158,9 +157,8 @@ class Shift(Base):
     facility_id = Column(Integer, ForeignKey("facilities.id"), nullable=False, index=True)
     started_at = Column(DateTime, default=utcnow, nullable=False)
     ended_at = Column(DateTime, nullable=True)
-    # "verified": inside the radius; "not_required": geo control off; "no_coords": facility location unknown
-    geo_status = Column(String(20), default="not_required")
-    geo_distance = Column(Float, nullable=True)
+    # How the shift was started: "qr" — scanned the workplace QR, "button" — QR check-in is off
+    checkin = Column("geo_status", String(20), default="button")
 
     employee = relationship("Employee", back_populates="shifts")
     tasks = relationship("ShiftTask", back_populates="shift", cascade="all, delete-orphan")

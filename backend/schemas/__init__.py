@@ -10,6 +10,7 @@ from schemas.requests import (
     SetupRequest,
     ShiftRoleRequest,
     StaffUpdateRequest,
+    StartShiftRequest,
     TaskRequest,
 )
 
@@ -23,6 +24,7 @@ __all__ = [
     "NewStaff",
     "ProblemRequest",
     "SetupRequest",
+    "StartShiftRequest",
     "ShiftRoleRequest",
     "StaffUpdateRequest",
     "TaskRequest",
