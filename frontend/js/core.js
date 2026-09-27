@@ -420,8 +420,8 @@ async function collectPhotos({ title, note = "", confirm = "Готово" }) {
             </div>
             ${more
               ? html`<div class="${Bridge.isMobile ? "row-buttons" : "stack"}">
-                  <button type="button" class="btn btn-secondary" data-cp="camera">${Bridge.isMobile ? "📷 Ещё фото" : "📎 Добавить фото"}</button>
-                  ${Bridge.isMobile ? html`<button type="button" class="btn btn-secondary" data-cp="gallery">🖼 Из галереи</button>` : ""}
+                  <button type="button" class="btn btn-secondary" data-cp="camera">${Bridge.isMobile ? html`<i class="ico" data-i="camera" aria-hidden="true"></i> Ещё фото` : html`<i class="ico" data-i="paperclip" aria-hidden="true"></i> Добавить фото`}</button>
+                  ${Bridge.isMobile ? html`<button type="button" class="btn btn-secondary" data-cp="gallery"><i class="ico" data-i="image" aria-hidden="true"></i> Из галереи</button>` : ""}
                 </div>`
               : html`<p class="muted small">Можно прикрепить до ${MAX_PHOTOS} фото.</p>`}
           </div>
@@ -459,7 +459,9 @@ async function collectPhotos({ title, note = "", confirm = "Готово" }) {
 }
 
 function photoLabel(action) {
-  return Bridge.isMobile ? `📷 Сфотографировать ${action}` : `📎 Прикрепить фото ${action}`;
+  return Bridge.isMobile
+    ? html`<i class="ico" data-i="camera" aria-hidden="true"></i> Сфотографировать ${action}`
+    : html`<i class="ico" data-i="paperclip" aria-hidden="true"></i> Прикрепить фото ${action}`;
 }
 
 // ---------- Router ----------
@@ -534,7 +536,7 @@ Actions.toggle = (el) => {
 Actions.closeApp = () => Bridge.close();
 
 function chatButton() {
-  return html`<button type="button" class="btn btn-secondary chat-btn" data-act="closeApp">💬 Вернуться в чат с ботом</button>`;
+  return html`<button type="button" class="btn btn-secondary chat-btn" data-act="closeApp"><i class="ico" data-i="chat" aria-hidden="true"></i> Вернуться в чат с ботом</button>`;
 }
 
 // Owner's switch between the cabinet and their own shift (the "I work shifts too" role)
@@ -542,8 +544,8 @@ function roleTabs(active) {
   const me = typeof App !== "undefined" && App.me;
   if (!me || !me.owner || !me.owner.setup_done) return "";
   return html`<nav class="role-tabs" aria-label="Роль">
-    <button type="button" class="${active === "home" ? "active" : ""}" data-act="roleHome">🏪 Кабинет</button>
-    <button type="button" class="${active === "shift" ? "active" : ""}" data-act="roleShift">👩‍🍳 Моя смена</button>
+    <button type="button" class="${active === "home" ? "active" : ""}" data-act="roleHome"><i class="ico" data-i="store" aria-hidden="true"></i> Кабинет</button>
+    <button type="button" class="${active === "shift" ? "active" : ""}" data-act="roleShift"><i class="ico" data-i="user" aria-hidden="true"></i> Моя смена</button>
   </nav>`;
 }
 
@@ -603,7 +605,7 @@ function screen(title, body, { back = true, action = null } = {}) {
 function errorState(error, retry) {
   Actions.retryScreen = retry;
   return html`<div class="empty">
-    <div class="empty-icon">⚠️</div>
+    <div class="empty-icon"><i class="ico" data-i="warning" aria-hidden="true"></i></div>
     <p>${error instanceof ApiError ? error.message : "Не удалось загрузить данные"}</p>
     <button type="button" class="btn btn-primary" data-act="retryScreen">Повторить</button>
   </div>`;

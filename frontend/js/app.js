@@ -13,11 +13,11 @@ Screens.landing = {
         <p class="lead">Порядок к проверке Роспотребнадзора: аудит по официальному проверочному листу и задачи смене с фото.</p>
         <div class="stack">
           <button type="button" class="next-step" data-act="becomeOwner">
-            <span class="next-num">🏪</span>
+            <span class="next-num"><i class="ico" data-i="store" aria-hidden="true"></i></span>
             <span><strong>Я владелец или управляющий</strong><span class="muted">Настроить заведение и пройти аудит</span></span>
           </button>
           <button type="button" class="next-step" data-act="becomeStaff">
-            <span class="next-num">👩‍🍳</span>
+            <span class="next-num"><i class="ico" data-i="user" aria-hidden="true"></i></span>
             <span><strong>Я сотрудник</strong><span class="muted">Подключиться к команде по QR-коду</span></span>
           </button>
         </div>

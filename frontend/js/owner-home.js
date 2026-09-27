@@ -19,7 +19,7 @@ Screens.home = {
       (state) => homeView(state),
       {
         back: false,
-        action: html`<button type="button" class="icon-btn" data-act="goSettings" aria-label="Настройки">⚙</button>`,
+        action: html`<button type="button" class="icon-btn" data-act="goSettings" aria-label="Настройки"><i class="ico" data-i="gear" aria-hidden="true"></i></button>`,
       }
     );
   },
@@ -77,8 +77,8 @@ function homeView(state) {
     <section class="section">
       <h2>Документы и команда</h2>
       <div class="tiles">
-        <button type="button" class="tile" data-act="goInvite"><span class="tile-icon">👥</span>Команда и приглашения</button>
-        <button type="button" class="tile" data-act="downloadAct"><span class="tile-icon">📄</span>Акт аудита (PDF)</button>
+        <button type="button" class="tile" data-act="goInvite"><span class="tile-icon"><i class="ico" data-i="users" aria-hidden="true"></i></span>Команда и приглашения</button>
+        <button type="button" class="tile" data-act="downloadAct"><span class="tile-icon"><i class="ico" data-i="file" aria-hidden="true"></i></span>Акт аудита (PDF)</button>
       </div>
     </section>
     ${chatButton()}`;
@@ -88,11 +88,11 @@ function homeView(state) {
 function readinessTodo(s, review, mine, team) {
   const left = s.total - s.answered;
   const rows = [];
-  if (review) rows.push({ icon: "🔍", text: `Проверить исправления: ${review}`, target: "sec-review" });
-  if (mine) rows.push({ icon: "📋", text: `Ваши задачи: ${mine}`, target: "sec-mine" });
-  if (team) rows.push({ icon: "👥", text: `Нарушения у команды: ${team}`, target: "sec-team" });
-  if (left) rows.push({ icon: "❓", text: `Не проверено вопросов: ${left} из ${s.total}`, act: "goAudit" });
-  if (!rows.length && !s.ready) rows.push({ icon: "📊", text: `Индекс ${s.index}% — для готовности нужно от 90%`, act: "goAuditSummary" });
+  if (review) rows.push({ icon: html`<i class="ico" data-i="search" aria-hidden="true"></i>`, text: `Проверить исправления: ${review}`, target: "sec-review" });
+  if (mine) rows.push({ icon: html`<i class="ico" data-i="clipboard" aria-hidden="true"></i>`, text: `Ваши задачи: ${mine}`, target: "sec-mine" });
+  if (team) rows.push({ icon: html`<i class="ico" data-i="users" aria-hidden="true"></i>`, text: `Нарушения у команды: ${team}`, target: "sec-team" });
+  if (left) rows.push({ icon: html`<i class="ico" data-i="help" aria-hidden="true"></i>`, text: `Не проверено вопросов: ${left} из ${s.total}`, act: "goAudit" });
+  if (!rows.length && !s.ready) rows.push({ icon: html`<i class="ico" data-i="chart" aria-hidden="true"></i>`, text: `Индекс ${s.index}% — для готовности нужно от 90%`, act: "goAuditSummary" });
 
   if (!rows.length) return html`<p class="muted small">Аудит пройден, нарушений нет. Соблюдается ${s.compliant} из ${s.applicable}.</p>`;
   return html`<div class="todo">
@@ -151,7 +151,7 @@ Actions.teamDefect = (el) => {
   sheet(
     html`<p class="muted small">${d.zone} · ${d.assigned_position} · ${DEFECT_STATUS[d.status]}</p>
       <h3>${d.title}</h3>
-      ${d.return_reason ? html`<p class="notice small">↩️ Вернули: ${d.return_reason}</p>` : ""}
+      ${d.return_reason ? html`<p class="notice small"><i class="ico" data-i="undo" aria-hidden="true"></i> Вернули: ${d.return_reason}</p>` : ""}
       ${photoPair(d.before_photos, "Как сейчас", d.reference_photo, "Как должно быть")}
       ${d.remediation ? html`<p><strong>Что сделать:</strong> ${d.remediation}</p>` : ""}
       <p class="muted small">Задача у должности «${d.assigned_position}». Когда пришлют фото исправления, оно появится в «Ждут вашей проверки».</p>`,
@@ -290,7 +290,7 @@ function teamView(state) {
     <button type="button" class="btn btn-secondary" data-act="addStaff">+ Добавить сотрудника</button>
     ${waiting.length
       ? html`<div class="stack">
-          <button type="button" class="btn btn-primary" data-act="inviteAll">📨 Отправить приглашения всем · ${waiting.length}</button>
+          <button type="button" class="btn btn-primary" data-act="inviteAll"><i class="ico" data-i="mail" aria-hidden="true"></i> Отправить приглашения всем · ${waiting.length}</button>
           <p class="muted small center">Бот пришлёт вам в чат готовое сообщение для каждого — останется переслать его человеку.</p>
         </div>`
       : html`<p class="muted small center">Все в MAX ✓</p>`}
@@ -305,7 +305,7 @@ Actions.inviteOne = (el) =>
     sheet(
       html`<h3>Приглашение: ${person.full_name}</h3>
         <p class="muted small">Ссылка личная и сработает один раз — отправьте её только этому человеку.</p>
-        <button type="button" class="btn btn-primary" data-act="shareInviteOne">📤 Отправить в MAX</button>
+        <button type="button" class="btn btn-primary" data-act="shareInviteOne"><i class="ico" data-i="send" aria-hidden="true"></i> Отправить в MAX</button>
         <p class="muted small center">или пусть отсканирует QR с вашего экрана в MAX</p>
         <div class="qr">${raw(App.invite.qr_svg)}</div>
         <button type="button" class="btn btn-secondary" data-act="copyInvite">Скопировать ссылку</button>`,
@@ -364,7 +364,7 @@ function settingsView(state) {
       <div class="stack">
         <button type="button" class="btn btn-secondary" data-act="editSetup">Изменить название, должности и обязанности</button>
         ${state.qr_checkin
-          ? html`<button type="button" class="btn btn-secondary" data-act="downloadCheckin">🖨 QR «Начало смены» (PDF)</button>
+          ? html`<button type="button" class="btn btn-secondary" data-act="downloadCheckin"><i class="ico" data-i="file" aria-hidden="true"></i> QR «Начало смены» (PDF)</button>
               <button type="button" class="btn btn-secondary" data-act="reissueCheckin">Перевыпустить QR</button>`
           : ""}
       </div>

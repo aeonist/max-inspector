@@ -316,7 +316,7 @@ function auditSummaryView(state) {
     </section>
     ${state.defects.length
       ? html`<section class="card">
-          <h2>❌ ${state.defects.length} ${plural(state.defects.length, "нарушение", "нарушения", "нарушений")} в работе</h2>
+          <h2><i class="ico" data-i="x-circle" aria-hidden="true"></i> ${state.defects.length} ${plural(state.defects.length, "нарушение", "нарушения", "нарушений")} в работе</h2>
           <ul class="list">
             ${toStaff ? html`<li class="list-row"><span>Отправлены ответственным</span><strong>${toStaff}</strong></li>` : ""}
             ${toOwner ? html`<li class="list-row"><span>Ваши задачи (документы, помещения)</span><strong>${toOwner}</strong></li>` : ""}
@@ -326,7 +326,7 @@ function auditSummaryView(state) {
     <div class="stack">
       ${left ? html`<button type="button" class="btn btn-primary" data-act="goAudit">Продолжить аудит</button>` : ""}
       <button type="button" class="btn ${left ? "btn-secondary" : "btn-primary"}" data-act="goHomeDefects">Открыть нарушения</button>
-      <button type="button" class="btn btn-secondary" data-act="downloadAct">📄 Акт аудита (PDF)</button>
+      <button type="button" class="btn btn-secondary" data-act="downloadAct"><i class="ico" data-i="file" aria-hidden="true"></i> Акт аудита (PDF)</button>
       <button type="button" class="btn-link" data-act="restartAudit">Пройти аудит заново</button>
     </div>`;
 }
