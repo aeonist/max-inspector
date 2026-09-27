@@ -1,6 +1,9 @@
 import random
+import secrets
+
 from sqlalchemy.orm import Session
-from models import Facility, Employee
+
+from models import Employee, Facility
 
 
 # Generate unique facility code XXXX-XXXX
@@ -27,4 +30,12 @@ def generate_unique_employee_code(db: Session, facility_id: int) -> str:
             .first()
         )
         if not existing:
+            return candidate
+
+
+# Unguessable token for the staff invite link and QR poster
+def generate_invite_token(db: Session) -> str:
+    while True:
+        candidate = secrets.token_urlsafe(9)
+        if not db.query(Facility).filter(Facility.invite_token == candidate).first():
             return candidate

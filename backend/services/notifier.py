@@ -1,89 +1,114 @@
 import logging
+
+from maxapi.types.input_media import InputMedia
+from sqlalchemy.orm import Session
+
+from max_bot import keyboards
 from max_bot.instance import bot
-from max_bot.keyboards import (
-    get_owner_dashboard_keyboard,
-    get_request_geo_keyboard,
-)
+from models import Defect, Employee, Facility
+from services import audit
+from services.checklist import get_item
 
 logger = logging.getLogger(__name__)
 
 
-# Notify owner that facility was created or updated
-async def notify_owner_facility_saved(user_id: int, facility_code: str, facility_name: str):
+def _media(*urls) -> list[InputMedia]:
+    paths = [audit.local_photo_path(u) for u in urls]
+    return [InputMedia(str(p)) for p in paths if p]
+
+
+async def _send(user_id: int, text: str, attachments: list) -> bool:
     try:
-        builder = get_owner_dashboard_keyboard(facility_code, user_id)
-        await bot.send_message(
-            user_id=user_id,
-            text=(
-                "Регистрация заведения завершена.\n\n"
-                f"Наименование: {facility_name}\n"
-                f"Регистрационный номер: {facility_code}\n\n"
-                "Номер объекта предназначен для передачи сотрудникам.\n"
-                "Для перехода к управлению используйте кнопку ниже:"
-            ),
-            attachments=[builder.as_markup()],
-        )
+        await bot.send_message(user_id=user_id, text=text, attachments=attachments)
+        return True
     except Exception as e:
-        logger.error(f"Failed to notify owner {user_id}: {e}")
+        logger.error(f"Failed to send message to {user_id}: {e}")
+        return False
 
 
-# Notify employee upon register or claim
-async def notify_employee_registered(
-    user_id: int, full_name: str, position: str, facility_identifier: str
-):
-    try:
-        builder = get_request_geo_keyboard()
-        await bot.send_message(
-            user_id=user_id,
-            text=(
-                "Регистрация сотрудника завершена.\n\n"
-                f"Сотрудник: {full_name}\n"
-                f"Должность: {position}\n"
-                f"Заведение: {facility_identifier}\n\n"
-                "Для открытия смены подтвердите фактическое присутствие на объекте:"
-            ),
-            attachments=[builder.as_markup()],
-        )
-    except Exception as e:
-        logger.error(f"Failed to notify employee {user_id}: {e}")
+# Violation card: photo 1 — as it is now, photo 2 — as it should be
+async def send_defect_card(db: Session, facility: Facility, defect: Defect) -> list[str]:
+    recipients = audit.defect_recipients(db, facility, defect)
+    if not recipients:
+        return []
+    item = get_item(defect.item_id) or {}
+    reference = audit.reference_photo_url(facility, defect.item_id)
+    media = _media(defect.before_photo, reference)
+
+    lines = [f"⚠️ Нарушение: {defect.title}"]
+    if len(media) == 2:
+        lines.append("Фото 1 — как сейчас, фото 2 — как должно быть.")
+    elif item.get("photo_hint"):
+        lines.append(f"Как должно быть: {item['photo_hint']}.")
+    if item.get("remediation"):
+        lines.append(f"Что сделать: {item['remediation']}")
+    if item.get("basis"):
+        lines.append(f"Основание: {item['basis']}")
+    lines.append("Исправьте и сфотографируйте результат в задаче.")
+    text = "\n".join(lines)
+
+    delivered = []
+    for emp in recipients:
+        keyboard = keyboards.defect_card(emp.user_id, defect.id)
+        if await _send(emp.user_id, text, [*media, keyboard.as_markup()]):
+            delivered.append(emp.full_name)
+    return delivered
 
 
-# Notify employees of a facility about detected defect and remediation steps
-async def notify_employees_defect(
-    db,
-    facility_id: int,
-    facility_name: str,
-    duty_title: str,
-    violation: str,
-    remediation: str,
-    assigned_role: str,
-    reporter_name: str = "Руководитель / Инспектор",
-):
-    try:
-        from models import Employee
-        employees = (
-            db.query(Employee)
-            .filter(Employee.facility_id == facility_id, Employee.user_id.isnot(None))
-            .all()
-        )
-        if not employees:
-            logger.info(f"No linked employees found to notify for facility {facility_id}")
-            return
+# Before/after for the owner with Accept / Return buttons
+async def send_review_card(facility: Facility, defect: Defect, employee: Employee) -> bool:
+    if not facility.owner_user_id:
+        return False
+    text = (
+        f"🔍 Исправление на проверку: {defect.title}\n"
+        f"Исправил(а): {employee.full_name}, {employee.position}.\n"
+        "Фото 1 — было, фото 2 — стало. Принять?"
+    )
+    media = _media(defect.before_photo, defect.after_photo)
+    return await _send(facility.owner_user_id, text, [*media, keyboards.review(defect.id).as_markup()])
 
-        msg_text = (
-            f"Внимание! Зафиксировано нарушение на объекте {facility_name}.\n\n"
-            f"Требование: {duty_title}\n"
-            f"Выявленный дефект: {violation}\n"
-            f"Ответственная роль: {assigned_role}\n\n"
-            f"Инструкция по устранению (регламент):\n{remediation}\n\n"
-            f"Зафиксировал: {reporter_name}\n"
-            "После устранения дефекта прикрепите фотоподтверждение в веб-приложении."
-        )
-        for emp in employees:
-            try:
-                await bot.send_message(user_id=emp.user_id, text=msg_text)
-            except Exception as ex:
-                logger.warning(f"Could not send defect notice to emp {emp.id}: {ex}")
-    except Exception as e:
-        logger.error(f"Failed to notify employees of defect: {e}")
 
+async def send_fix_accepted(employee: Employee, defect: Defect) -> bool:
+    if not employee or not employee.user_id:
+        return False
+    return await _send(employee.user_id, f"✅ Исправление принято: {defect.title}\nСпасибо!", [])
+
+
+async def send_fix_returned(employee: Employee, defect: Defect) -> bool:
+    if not employee or not employee.user_id:
+        return False
+    text = (
+        f"↩️ Исправление вернули: {defect.title}\n"
+        f"Причина: {defect.return_reason}.\n"
+        "Исправьте и сфотографируйте ещё раз."
+    )
+    keyboard = keyboards.defect_card(employee.user_id, defect.id)
+    return await _send(employee.user_id, text, [keyboard.as_markup()])
+
+
+async def send_staff_joined(facility: Facility, employee: Employee) -> bool:
+    if not facility.owner_user_id or facility.owner_user_id == employee.user_id:
+        return False
+    text = f"👋 В команде «{facility.name}» пополнение: {employee.full_name}, {employee.position}."
+    keyboard = keyboards.single_app_button("Открыть кабинет", facility.owner_user_id, "home")
+    return await _send(facility.owner_user_id, text, [keyboard.as_markup()])
+
+
+# Problem reported by staff during a shift
+async def send_problem(facility: Facility, defect: Defect, employee: Employee) -> bool:
+    if not facility.owner_user_id:
+        return False
+    text = f"📣 {employee.full_name} ({employee.position}) сообщает о проблеме:\n{defect.comment or defect.title}"
+    keyboard = keyboards.single_app_button("Открыть кабинет", facility.owner_user_id, "home")
+    return await _send(facility.owner_user_id, text, [*_media(defect.before_photo), keyboard.as_markup()])
+
+
+# After the wizard: ask the owner for the facility location right in the chat
+async def send_facility_geo_request(facility: Facility) -> bool:
+    if not facility.owner_user_id:
+        return False
+    text = (
+        f"Заведение «{facility.name}» готово 🎉\n"
+        "Вы сейчас в заведении? Отправьте геопозицию — по ней сотрудники будут отмечать начало смены."
+    )
+    return await _send(facility.owner_user_id, text, [keyboards.facility_geo_request().as_markup()])

@@ -1,17 +1,33 @@
+import io
 import uuid
-from pathlib import Path
-from fastapi import APIRouter, File, UploadFile
-from config import UPLOADS_DIR
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from PIL import Image, ImageOps, UnidentifiedImageError
+
+from config import UPLOAD_MAX_BYTES, UPLOAD_MAX_SIDE_PX, UPLOADS_DIR
+from services.auth import CurrentUser, current_user
 
 router = APIRouter(prefix="/api", tags=["uploads"])
 
+# MPO is what some phone cameras produce for JPEG shots
+ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP", "MPO"}
 
-# Upload task photo
+
+# Upload a photo: only images, re-encoded to JPEG with EXIF (incl. GPS) stripped
 @router.post("/upload")
-async def upload_photo(file: UploadFile = File(...)):
-    filename = f"{uuid.uuid4().hex}_{file.filename}"
-    upload_path = UPLOADS_DIR / filename
-    content = await file.read()
-    with open(upload_path, "wb") as f:
-        f.write(content)
-    return {"status": "ok", "url": f"/uploads/{filename}"}
+async def upload_photo(file: UploadFile = File(...), user: CurrentUser = Depends(current_user)):
+    content = await file.read(UPLOAD_MAX_BYTES + 1)
+    if len(content) > UPLOAD_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Фото больше 10 МБ, сделайте снимок поменьше")
+    try:
+        image = Image.open(io.BytesIO(content))
+        if image.format not in ALLOWED_FORMATS:
+            raise HTTPException(status_code=415, detail="Нужна фотография в формате JPG, PNG или WEBP")
+        image = ImageOps.exif_transpose(image).convert("RGB")
+    except (UnidentifiedImageError, OSError):
+        raise HTTPException(status_code=415, detail="Не получилось прочитать фото, попробуйте ещё раз")
+
+    image.thumbnail((UPLOAD_MAX_SIDE_PX, UPLOAD_MAX_SIDE_PX))
+    filename = f"{uuid.uuid4().hex}.jpg"
+    image.save(UPLOADS_DIR / filename, "JPEG", quality=82, optimize=True)
+    return {"url": f"/uploads/{filename}"}

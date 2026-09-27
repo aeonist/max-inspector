@@ -1,0 +1,396 @@
+// Staff: join by invite, QR scan, "Моя смена"
+
+const Staff = { shift: null, problemPhoto: null };
+
+// ---------- Join ----------
+
+Screens.join = {
+  async render({ token }) {
+    await loadScreen(
+      "Подключение",
+      () => api("GET", `/api/join/${encodeURIComponent(token)}`),
+      (info) => joinView(info, token),
+      { back: Router.stack.length > 1 }
+    );
+  },
+};
+
+function joinView(info, token) {
+  if (info.is_owner) {
+    return html`<div class="empty">
+      <div class="empty-icon">🔗</div>
+      <p>Это приглашение в ваше заведение «${info.facility_name}». Отправьте его сотрудникам.</p>
+      <button type="button" class="btn btn-primary" data-act="goHome">В кабинет</button>
+    </div>`;
+  }
+  if (info.already_member) {
+    return html`<div class="empty">
+      <div class="empty-icon">✅</div>
+      <p>Вы уже в команде «${info.facility_name}».</p>
+      <button type="button" class="btn btn-primary" data-act="goShiftReset">Моя смена</button>
+    </div>`;
+  }
+  if (info.other_facility) {
+    return html`<div class="empty">
+      <div class="empty-icon">ℹ️</div>
+      <p>Вы уже подключены к «${info.other_facility}». Чтобы перейти в «${info.facility_name}», попросите прежнего руководителя отвязать ваш аккаунт.</p>
+    </div>`;
+  }
+  if (!info.free.length) {
+    return html`<div class="empty">
+      <div class="empty-icon">👥</div>
+      <p>В команде «${info.facility_name}» пока нет свободных мест. Попросите руководителя добавить вас и отсканируйте QR ещё раз.</p>
+    </div>`;
+  }
+  return html`<p class="lead">Подключаемся к «${info.facility_name}». Кто вы?</p>
+    <div class="stack">
+      ${info.free.map(
+        (p) => html`<button type="button" class="person-pick" data-act="claimProfile" data-id="${p.id}" data-token="${token}" data-name="${p.full_name}" data-position="${p.position}">
+          <strong>${p.full_name}</strong><span class="muted">${p.position}</span>
+        </button>`
+      )}
+    </div>
+    <p class="muted small center">Нет себя в списке? Попросите руководителя добавить вас в команду.</p>`;
+}
+
+Actions.claimProfile = async (el) => {
+  const { id, token, name, position } = el.dataset;
+  if (!(await confirmSheet(`Вы — ${name}?`, `Должность: ${position}. Аккаунт MAX привяжется к этому профилю.`, "Да, это я"))) return;
+  await busy(el, async () => {
+    const res = await api("POST", `/api/join/${encodeURIComponent(token)}`, { employee_id: Number(id) });
+    App.me = await api("GET", "/api/me");
+    Bridge.haptic("success");
+    await Router.go("joined", res, { reset: true });
+  });
+};
+
+Screens.joined = {
+  async render(res) {
+    mount(
+      "#app",
+      html`<main class="screen done-screen">
+        <div class="done-icon">👋</div>
+        <h1>Вы в команде!</h1>
+        <p class="lead">«${res.facility_name}» · ${res.full_name}, ${res.position}</p>
+        <p>Смена начинается в чате с ботом: нажмите «Начать смену» на месте. Задачи и нарушения будут приходить туда же.</p>
+        <button type="button" class="btn btn-primary" data-act="closeApp">Перейти в чат</button>
+        <button type="button" class="btn-link" data-act="goShiftReset">Посмотреть задачи смены</button>
+      </main>`
+    );
+  },
+};
+
+Actions.goShiftReset = () => Router.go("shift", {}, { reset: true });
+
+// ---------- QR scan (MAX openCodeReader) ----------
+
+Screens.scan = {
+  async render() {
+    mount(
+      "#app",
+      screen(
+        "Подключение",
+        html`<div class="empty">
+          <div class="empty-icon">📷</div>
+          <p>Отсканируйте QR-код с плаката в заведении или откройте ссылку-приглашение от руководителя.</p>
+          ${Bridge.inMax
+            ? html`<button type="button" class="btn btn-primary" data-act="scanInvite">Сканировать QR</button>`
+            : html`<p class="muted small">Наведите камеру телефона на QR-код — откроется чат с ботом.</p>`}
+        </div>`,
+        { back: Router.stack.length > 1 }
+      )
+    );
+  },
+};
+
+Actions.scanInvite = (el) =>
+  busy(el, async () => {
+    let value;
+    try {
+      value = await Bridge.scanQR();
+    } catch (e) {
+      throw new ApiError("Не получилось отсканировать. Попробуйте ещё раз", 0);
+    }
+    const match = value.match(/join_([\w-]+)/);
+    if (!match) throw new ApiError("Это не QR-код МАХ-Инспектора. Попросите у руководителя плакат или ссылку", 0);
+    await Router.go("join", { token: match[1] });
+  });
+
+// ---------- My shift ----------
+
+Screens.shift = {
+  async render({ focus } = {}) {
+    const data = await loadScreen(
+      "Моя смена",
+      async () => {
+        await Checklist.load();
+        return api("GET", "/api/shift");
+      },
+      (shift) => {
+        Staff.shift = shift;
+        return shiftView(shift);
+      },
+      { back: Router.stack.length > 1 }
+    );
+    if (data && focus) {
+      const card = document.getElementById(`defect-${focus}`);
+      if (card) {
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+        card.classList.add("highlight");
+      }
+    }
+  },
+};
+
+function shiftView(data) {
+  const shift = data.shift;
+  const urgent = data.defects.filter((d) => d.status !== "fixed");
+  const onReview = data.defects.filter((d) => d.status === "fixed");
+  const zones = {};
+  data.duties.forEach((d) => {
+    (zones[d.zone] = zones[d.zone] || []).push(d);
+  });
+  const done = data.duties.filter((d) => d.done).length;
+
+  return html`${roleTabs("shift")}
+    <section class="card">
+      <p class="muted small">${data.facility.name}</p>
+      <h2>${data.employee.full_name}<span class="muted"> · ${data.employee.position}</span></h2>
+      ${data.employee.is_owner
+        ? html`<button type="button" class="btn-link small" data-act="ownerRoleMenu">Сменить должность или выйти из роли</button>`
+        : ""}
+      ${shift
+        ? html`<p class="status status-green">Смена с ${shift.started}${shift.geo_status === "verified" ? " · 📍 на месте" : ""}${shift.geo_status === "no_coords" ? " · место не проверено" : ""}</p>`
+        : html`<p class="status status-gray">Смена не начата</p>
+          ${data.facility.geo_required
+            ? html`<p class="muted small">Начните смену в чате с ботом: кнопка «Начать смену — я на месте» работает, когда вы в заведении.</p>
+              <button type="button" class="btn btn-primary" data-act="closeApp">Перейти в чат</button>`
+            : html`<button type="button" class="btn btn-primary" data-act="startShift">Начать смену</button>`}`}
+    </section>
+
+    ${urgent.length
+      ? html`<section class="section">
+          <h2 class="urgent-title">🔴 Срочно <span class="count">${urgent.length}</span></h2>
+          ${urgent.map((d) => urgentCard(d))}
+        </section>`
+      : ""}
+
+    ${onReview.length
+      ? html`<section class="section">
+          <h2>На проверке у руководителя <span class="count">${onReview.length}</span></h2>
+          ${onReview.map(
+            (d) => html`<article class="card defect-card" id="defect-${d.id}">
+              <h3>${d.title}</h3>
+              ${photoPair(d.before_photo, "Было", d.after_photo, "Стало")}
+              <p class="muted small">⏳ Руководитель проверит фото и примет исправление</p>
+            </article>`
+          )}
+        </section>`
+      : ""}
+
+    <section class="section">
+      <h2>Задачи смены <span class="count">${done}/${data.duties.length}</span></h2>
+      ${data.duties.length
+        ? html`<div class="bar"><div class="bar-fill" style="width:${data.duties.length ? Math.round((done / data.duties.length) * 100) : 0}%"></div></div>
+          ${shift ? "" : html`<p class="muted small">Отмечать задачи можно после начала смены.</p>`}
+          ${Object.entries(zones).map(
+            ([zone, duties]) => html`<h3 class="zone">${zone}</h3>
+              <ul class="task-list card">
+                ${duties.map(
+                  (d) => html`<li class="task ${d.done ? "done" : ""}">
+                    <button type="button" class="task-check" data-act="toggleTask" data-id="${d.id}" data-done="${d.done ? "1" : ""}" ${raw(shift ? "" : "disabled")}
+                      aria-label="${d.done ? "Снять отметку" : "Отметить выполненной"}">${d.done ? "✓" : ""}</button>
+                    <span class="task-text">${d.question}${d.photo_url ? html` <span class="muted small">📷</span>` : ""}</span>
+                    <button type="button" class="icon-btn" data-act="taskMenu" data-id="${d.id}" aria-label="Подробнее">⋯</button>
+                  </li>`
+                )}
+              </ul>`
+          )}`
+        : html`<p class="muted">На вашу должность задач нет. Руководитель может добавить их в настройках.</p>`}
+    </section>
+
+    <div class="stack">
+      <button type="button" class="btn btn-secondary" data-act="reportProblem">📣 Сообщить о проблеме</button>
+      ${shift ? html`<button type="button" class="btn btn-secondary" data-act="endShift">Завершить смену</button>` : ""}
+      ${chatButton()}
+    </div>`;
+}
+
+// Owner in the employee role: try another position's duties, or turn the role off
+Actions.ownerRoleMenu = async (el) => {
+  const state = App.ownerState || (await api("GET", "/api/owner/state"));
+  const current = Staff.shift.employee.position;
+  const choice = await sheet(
+    html`<h3>Моя роль на смене</h3><p class="muted small">Сейчас: ${current}. Задачи и нарушения приходят по должности.</p>`,
+    [
+      ...state.positions.filter((p) => p !== current).map((p) => ({ label: `Стать: ${p}`, value: p })),
+      { label: "Я не работаю на смене", kind: "danger", value: "__off" },
+      { label: "Отмена", value: null },
+    ]
+  );
+  if (!choice) return;
+  if (choice === "__off") await setShiftRole(el, false, null);
+  else await setShiftRole(el, true, choice);
+};
+
+function urgentCard(d) {
+  return html`<article class="card defect-card urgent" id="defect-${d.id}">
+    ${d.status === "returned" ? html`<p class="notice small">↩️ Вернули: ${d.return_reason}</p>` : ""}
+    <p class="muted small">${d.zone}</p>
+    <h3>${d.title}</h3>
+    ${photoPair(d.before_photo, "Как сейчас", d.reference_photo, "Как должно быть")}
+    ${!d.reference_photo && d.photo_hint ? html`<p class="small"><strong>Как должно быть:</strong> ${d.photo_hint}</p>` : ""}
+    ${d.remediation ? html`<p><strong>Что сделать:</strong> ${d.remediation}</p>` : ""}
+    ${basisBlock(Checklist.byId[d.item_id], "dbasis-" + d.id)}
+    <button type="button" class="btn btn-primary" data-act="fixDefect" data-id="${d.id}">${photoLabel("исправление")}</button>
+  </article>`;
+}
+
+Actions.startShift = (el) =>
+  busy(el, async () => {
+    await api("POST", "/api/shift/start");
+    Bridge.haptic("success");
+    toast("Смена начата ✓", { type: "success" });
+    await Router.refresh();
+  });
+
+// After photo goes to the owner as before/after for review
+Actions.fixDefect = (el) => {
+  pickPhoto().then(async (file) => {
+    if (!file) return;
+    await busy(el, async () => {
+      const url = await uploadPhoto(file);
+      await api("POST", `/api/defects/${el.dataset.id}/fix`, { photo_url: url });
+      Bridge.haptic("success");
+      toast("Отправлено руководителю на проверку ✓", { type: "success" });
+      await Router.refresh();
+    });
+  });
+};
+
+Actions.toggleTask = (el) => {
+  const done = !el.dataset.done;
+  // Optimistic update; rolled back by the refresh on error
+  el.closest(".task").classList.toggle("done", done);
+  el.textContent = done ? "✓" : "";
+  el.dataset.done = done ? "1" : "";
+  if (done) Bridge.haptic("light");
+  api("POST", `/api/shift/tasks/${el.dataset.id}`, { done })
+    .then(() => {
+      const duty = Staff.shift.duties.find((d) => d.id === Number(el.dataset.id));
+      if (duty) duty.done = done;
+      updateTaskCounters();
+    })
+    .catch((e) => {
+      toastError(e, () => Actions.toggleTask(el));
+      Router.refresh();
+    });
+};
+
+function updateTaskCounters() {
+  const duties = Staff.shift.duties;
+  const done = duties.filter((d) => d.done).length;
+  const section = document.querySelector(".task-list") && document.querySelector(".task-list").closest(".section");
+  if (!section) return;
+  section.querySelector(".count").textContent = `${done}/${duties.length}`;
+  section.querySelector(".bar-fill").style.width = `${Math.round((done / duties.length) * 100)}%`;
+}
+
+Actions.taskMenu = (el) => {
+  const duty = Staff.shift.duties.find((d) => d.id === Number(el.dataset.id));
+  const item = Checklist.byId[duty.id];
+  sheet(
+    html`<h3>${duty.question}</h3>
+      ${duty.norm ? html`<p>${duty.norm}</p>` : ""}
+      ${duty.photo_hint ? html`<p class="muted small">Что показать на фото: ${duty.photo_hint}</p>` : ""}
+      ${item && item.reference_photo
+        ? html`<button type="button" class="example ok wide" data-act="photo" data-src="/${item.reference_photo}" data-caption="Так правильно">
+            <img src="/${item.reference_photo}" alt=""><span>✓ Так правильно</span></button>`
+        : ""}
+      ${duty.photo_url ? html`<p class="small">📷 Фото прикреплено</p>` : ""}
+      ${Staff.shift.shift
+        ? html`<button type="button" class="btn btn-secondary" data-act="taskPhoto" data-id="${duty.id}">${photoLabel("выполнение")}</button>`
+        : ""}`,
+    [{ label: "Закрыть", value: null }]
+  );
+};
+
+// Optional photo proof of a duty; marks it done
+Actions.taskPhoto = (el) => {
+  const id = Number(el.dataset.id);
+  pickPhoto().then(async (file) => {
+    if (!file) return;
+    document.dispatchEvent(new Event("sheet:close"));
+    try {
+      const url = await uploadPhoto(file);
+      await api("POST", `/api/shift/tasks/${id}`, { done: true, photo_url: url });
+      toast("Фото прикреплено, задача выполнена ✓", { type: "success" });
+      await Router.refresh();
+    } catch (e) {
+      toastError(e);
+    }
+  });
+};
+
+Actions.endShift = (el) =>
+  busy(el, async () => {
+    let res = await api("POST", "/api/shift/end", { force: false });
+    if (!res.closed) {
+      const ok = await confirmSheet(
+        `Осталось ${res.left} ${plural(res.left, "задача", "задачи", "задач")}`,
+        "Всё равно завершить смену?",
+        "Завершить",
+        "danger"
+      );
+      if (!ok) return;
+      res = await api("POST", "/api/shift/end", { force: true });
+    }
+    const s = res.stats;
+    Bridge.haptic("success");
+    toast(`Смена завершена. Выполнено ${s.done} из ${s.total}${s.fixed ? `, исправлено нарушений: ${s.fixed}` : ""}`, {
+      type: "success",
+      duration: 5000,
+    });
+    await Router.refresh();
+  });
+
+Actions.reportProblem = async () => {
+  Staff.problemPhoto = null;
+  const text = await sheet(
+    html`<h3>Сообщить о проблеме</h3>
+      <p class="muted small">Например: сломался холодильник, закончилось дезсредство. Сообщение уйдёт руководителю.</p>
+      <textarea id="problemText" rows="3" maxlength="500" placeholder="Что случилось?"></textarea>
+      <button type="button" class="btn btn-secondary" id="problemPhotoBtn" data-act="problemPhoto">${photoLabel("")}</button>`,
+    [
+      {
+        label: "Отправить",
+        kind: "primary",
+        validate: (root) => {
+          const ok = root.querySelector("#problemText").value.trim().length >= 3;
+          if (!ok) toast("Опишите проблему парой слов", { type: "error" });
+          return ok;
+        },
+        read: (root) => root.querySelector("#problemText").value.trim(),
+      },
+      { label: "Отмена", value: null },
+    ]
+  );
+  if (!text) return;
+  try {
+    await api("POST", "/api/problems", { text, photo_url: Staff.problemPhoto });
+    toast("Отправлено руководителю ✓", { type: "success" });
+  } catch (e) {
+    toastError(e);
+  }
+};
+
+Actions.problemPhoto = (el) => {
+  pickPhoto().then(async (file) => {
+    if (!file) return;
+    const url = await busy(el, () => uploadPhoto(file));
+    if (url) {
+      Staff.problemPhoto = url;
+      el.textContent = "📷 Фото прикреплено ✓";
+    }
+  });
+};

@@ -1,0 +1,25 @@
+# Keep the build context small and free of secrets and local data
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.max_env
+.venv
+venv
+INFO
+scratch
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+*.db
+backend/uploads
+backend/tests
+backend/pytest.ini
+backend/requirements-dev.txt
+deploy.py
+Dockerfile
+compose.yaml
+.dockerignore
+README.md

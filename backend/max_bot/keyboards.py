@@ -1,126 +1,115 @@
+from urllib.parse import quote
+
+from maxapi.enums.intent import Intent
 from maxapi.types.attachments.buttons import (
     CallbackButton,
     LinkButton,
+    OpenAppButton,
     RequestGeoLocationButton,
 )
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
-from config import WEBAPP_BASE
+
+from config import MINIAPP_MODE, WEBAPP_BASE
+from max_bot.instance import bot_username
+from services.auth import make_link_token
+
+RETURN_REASONS = {
+    "photo": "Не видно на фото",
+    "notfixed": "Не устранено",
+    "other": "Нужно переделать",
+}
 
 
-# Owner dashboard link keyboard
-def get_owner_dashboard_keyboard(code: str, user_id: int | None) -> InlineKeyboardBuilder:
+# Button that opens the mini-app; payload arrives as start_param
+def app_button(text: str, user_id: int, payload: str = ""):
+    if MINIAPP_MODE == "openapp" and bot_username():
+        return OpenAppButton(text=text, web_app=bot_username(), payload=payload or None)
+    url = f"{WEBAPP_BASE}/?t={make_link_token(user_id)}"
+    if payload:
+        url += f"&p={quote(payload)}"
+    return LinkButton(text=text, url=url)
+
+
+def single_app_button(text: str, user_id: int, payload: str = "") -> InlineKeyboardBuilder:
+    return InlineKeyboardBuilder().row(app_button(text, user_id, payload))
+
+
+def role_choice() -> InlineKeyboardBuilder:
     builder = InlineKeyboardBuilder()
-    uid = user_id or 0
+    builder.row(CallbackButton(text="Я владелец или управляющий", payload="role_owner"))
+    builder.row(CallbackButton(text="Я сотрудник", payload="role_employee"))
+    builder.row(CallbackButton(text="Посмотреть демо-кафе", payload="demo"))
+    return builder
+
+
+# With geo control the shift starts from a location sent via the native MAX button
+def start_shift_button(geo_required: bool):
+    if geo_required:
+        return RequestGeoLocationButton(text="Начать смену — я на месте", quick=True)
+    return CallbackButton(text="Начать смену", payload="start_shift")
+
+
+def owner_menu(user_id: int, setup_done: bool, shift_state: str | None, geo_required: bool) -> InlineKeyboardBuilder:
+    builder = InlineKeyboardBuilder()
+    if not setup_done:
+        builder.row(app_button("Продолжить настройку", user_id, "setup"))
+        return builder
+    builder.row(app_button("Открыть кабинет", user_id, "home"))
+    # Owner who also works shifts
+    if shift_state == "off":
+        builder.row(start_shift_button(geo_required))
+    elif shift_state == "on":
+        builder.row(app_button("Моя смена", user_id, "shift"))
+        builder.row(CallbackButton(text="Завершить смену", payload="end_shift"))
+    return builder
+
+
+def facility_geo_request() -> InlineKeyboardBuilder:
+    builder = InlineKeyboardBuilder()
+    builder.row(RequestGeoLocationButton(text="Отправить геопозицию заведения", quick=True))
+    builder.row(CallbackButton(text="Позже", payload="geo_later"))
+    return builder
+
+
+def start_shift(geo_required: bool) -> InlineKeyboardBuilder:
+    return InlineKeyboardBuilder().row(start_shift_button(geo_required))
+
+
+def active_shift(user_id: int) -> InlineKeyboardBuilder:
+    builder = InlineKeyboardBuilder()
+    builder.row(app_button("Моя смена", user_id, "shift"))
+    builder.row(CallbackButton(text="Завершить смену", payload="end_shift"))
+    return builder
+
+
+def end_shift_confirm(left: int) -> InlineKeyboardBuilder:
+    builder = InlineKeyboardBuilder()
+    builder.row(CallbackButton(text=f"Да, завершить (осталось {left})", payload="end_shift_force", intent=Intent.NEGATIVE))
+    return builder
+
+
+def claim_profiles(profiles, token: str) -> InlineKeyboardBuilder:
+    builder = InlineKeyboardBuilder()
+    for emp in profiles:
+        builder.row(CallbackButton(text=f"{emp.full_name} — {emp.position}", payload=f"claim_{emp.id}_{token}"))
+    return builder
+
+
+def defect_card(user_id: int, defect_id: int) -> InlineKeyboardBuilder:
+    return single_app_button("Открыть задачу", user_id, f"defect_{defect_id}")
+
+
+def review(defect_id: int) -> InlineKeyboardBuilder:
+    builder = InlineKeyboardBuilder()
     builder.row(
-        LinkButton(
-            text="Панель управления заведением",
-            url=f"{WEBAPP_BASE}?role=owner&code={code}&user_id={uid}",
-        )
+        CallbackButton(text="Принять", payload=f"accept_{defect_id}", intent=Intent.POSITIVE),
+        CallbackButton(text="Вернуть", payload=f"return_{defect_id}", intent=Intent.NEGATIVE),
     )
     return builder
 
 
-# Owner setup link keyboard
-def get_owner_setup_keyboard(code: str, user_id: int | None) -> InlineKeyboardBuilder:
+def return_reasons(defect_id: int) -> InlineKeyboardBuilder:
     builder = InlineKeyboardBuilder()
-    uid = user_id or 0
-    builder.row(
-        LinkButton(
-            text="Настроить заведение",
-            url=f"{WEBAPP_BASE}?role=owner&mode=new&code={code}&user_id={uid}",
-        )
-    )
-    return builder
-
-
-# Main role selection keyboard
-def get_role_choice_keyboard() -> InlineKeyboardBuilder:
-    builder = InlineKeyboardBuilder()
-    builder.row(
-        CallbackButton(
-            text="Владелец или управляющий",
-            payload="role_owner",
-        )
-    )
-    builder.row(
-        CallbackButton(
-            text="Сотрудник заведения",
-            payload="role_employee",
-        )
-    )
-    return builder
-
-
-# Owner options: create new or login existing
-def get_owner_actions_keyboard() -> InlineKeyboardBuilder:
-    builder = InlineKeyboardBuilder()
-    builder.row(
-        CallbackButton(
-            text="Зарегистрировать новое заведение",
-            payload="owner_create_new",
-        )
-    )
-    builder.row(
-        CallbackButton(
-            text="Войти в существующее заведение",
-            payload="owner_login_existing",
-        )
-    )
-    return builder
-
-
-# Request geolocation button
-def get_request_geo_keyboard() -> InlineKeyboardBuilder:
-    builder = InlineKeyboardBuilder()
-    builder.row(
-        RequestGeoLocationButton(
-            text="Подтвердить присутствие на объекте",
-            quick=True,
-        )
-    )
-    return builder
-
-
-# Employee active shift keyboard
-def get_employee_active_shift_keyboard(
-    code: str, user_id: int, employee_id: int
-) -> InlineKeyboardBuilder:
-    builder = InlineKeyboardBuilder()
-    builder.row(
-        LinkButton(
-            text="Список задач на смену",
-            url=f"{WEBAPP_BASE}?role=employee&code={code}&user_id={user_id}",
-        )
-    )
-    builder.row(
-        CallbackButton(
-            text="Завершить смену",
-            payload=f"end_shift_{employee_id}",
-        )
-    )
-    return builder
-
-
-# Employee shift tasks link without end button
-def get_employee_tasks_link_keyboard(code: str, user_id: int) -> InlineKeyboardBuilder:
-    builder = InlineKeyboardBuilder()
-    builder.row(
-        LinkButton(
-            text="Список задач на смену",
-            url=f"{WEBAPP_BASE}?role=employee&code={code}&user_id={user_id}",
-        )
-    )
-    return builder
-
-
-# Employee claim selection keyboard
-def get_employee_claim_keyboard(unlinked_employees: list) -> InlineKeyboardBuilder:
-    builder = InlineKeyboardBuilder()
-    for e in unlinked_employees:
-        builder.row(
-            CallbackButton(
-                text=f"{e.full_name} - {e.position}",
-                payload=f"claim_emp_{e.id}",
-            )
-        )
+    for key, text in RETURN_REASONS.items():
+        builder.row(CallbackButton(text=text, payload=f"ret_{defect_id}_{key}"))
     return builder
