@@ -33,9 +33,9 @@ def generate_unique_employee_code(db: Session, facility_id: int) -> str:
             return candidate
 
 
-# Unguessable token for the staff invite link and QR poster
+# Unguessable token for a personal staff invite
 def generate_invite_token(db: Session) -> str:
     while True:
-        candidate = secrets.token_urlsafe(9)
-        if not db.query(Facility).filter(Facility.invite_token == candidate).first():
+        candidate = secrets.token_urlsafe(12)
+        if not db.query(Employee).filter(Employee.invite_token == candidate).first():
             return candidate

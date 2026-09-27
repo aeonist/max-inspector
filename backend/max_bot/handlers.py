@@ -16,10 +16,10 @@ from models import Defect, Employee, Facility
 from services import audit, notifier
 from services.demo import start_demo
 from services.facility import (
-    active_staff,
+    claim_invite,
     create_facility,
+    employee_by_invite,
     employee_of,
-    facility_by_invite,
     owner_facility,
 )
 from services.shifts import active_shift, close_shift, open_shift, shift_stats
@@ -97,52 +97,49 @@ async def _send_home(user_id: int) -> None:
     await _reply(user_id, text, keyboard)
 
 
-# Staff invite from a QR poster or link: https://max.ru/<bot>?start=join_<token>
-async def _handle_join(user_id: int, token: str) -> None:
+# Personal invite: https://max.ru/<bot>?start=inv_<token>, meant for exactly one staff member
+async def _handle_invite(user_id: int, token: str) -> None:
     db = SessionLocal()
     try:
-        fac = facility_by_invite(db, token)
-        if not fac:
-            await _reply(user_id, "Приглашение не найдено или устарело. Попросите у руководителя новую ссылку.")
+        emp = employee_by_invite(db, token)
+        if not emp:
+            await _reply(user_id, "Приглашение уже использовано или устарело. Попросите руководителя прислать новое.")
             return
-        if fac.owner_user_id == user_id:
-            await _reply(user_id, "Это приглашение в ваше заведение — отправьте его сотрудникам.")
-            await _send_home(user_id)
+        if emp.facility.owner_user_id == user_id:
+            await _reply(user_id, f"Это личное приглашение для сотрудника {emp.full_name} — перешлите его ему.")
             return
-        emp = employee_of(db, user_id)
-        if emp and emp.facility_id == fac.id:
-            await _reply(user_id, f"Вы уже в команде «{fac.name}».")
-            await _send_home(user_id)
-            return
-        if emp:
-            await _reply(
-                user_id,
-                f"Вы уже подключены к «{emp.facility.name}». Попросите руководителя отвязать аккаунт, "
-                "чтобы перейти в другое заведение.",
-            )
-            return
-        free = [e for e in active_staff(db, fac) if not e.user_id]
-        if not free:
-            await _reply(
-                user_id,
-                f"В штате «{fac.name}» нет свободных мест. Попросите руководителя добавить вас в команду "
-                "и откройте приглашение ещё раз.",
-            )
-            return
-        await _reply(user_id, f"Подключаемся к «{fac.name}». Кто вы?", keyboards.claim_profiles(free, token))
+        await _reply(
+            user_id,
+            f"Приглашение в команду «{emp.facility.name}».\nВы — {emp.full_name}, {emp.position}?",
+            keyboards.accept_invite(token),
+        )
     finally:
         db.close()
+
+
+# Links of the first version (one link for the whole team) no longer work
+async def _legacy_join(user_id: int) -> None:
+    await _reply(
+        user_id,
+        "Эта ссылка больше не работает: теперь у каждого сотрудника личное приглашение. Попросите руководителя прислать его.",
+    )
+
+
+async def _handle_payload(user_id: int, payload: str) -> None:
+    match = re.search(r"(inv|join)_([\w-]+)", payload)
+    if match and match.group(1) == "inv":
+        await _handle_invite(user_id, match.group(2))
+    elif match:
+        await _legacy_join(user_id)
+    else:
+        await _send_home(user_id)
 
 
 # Handle first start, including deep links with a payload
 @dp.bot_started()
 async def handle_bot_started(event: BotStarted):
     user_id = event.user.user_id
-    payload = event.payload or ""
-    if payload.startswith("join_"):
-        await _handle_join(user_id, payload.removeprefix("join_"))
-    else:
-        await _send_home(user_id)
+    await _handle_payload(user_id, event.payload or "")
 
 
 # Handle /start command (optionally with a payload)
@@ -152,11 +149,7 @@ async def handle_start(event: MessageCreated):
         return
     user_id = event.message.sender.user_id
     text = (event.message.body.text or "") if event.message.body else ""
-    match = re.search(r"join_([\w-]+)", text)
-    if match:
-        await _handle_join(user_id, match.group(1))
-    else:
-        await _send_home(user_id)
+    await _handle_payload(user_id, text)
 
 
 @dp.message_callback(F.callback.payload == "role_owner")
@@ -207,35 +200,28 @@ async def callback_role_employee(callback: MessageCallback):
     await callback.ack()
     await _reply(
         user_id,
-        "Отсканируйте QR-код на плакате в заведении или откройте ссылку-приглашение от руководителя.",
+        "Попросите руководителя прислать вам личное приглашение в MAX — или отсканируйте QR с экрана его телефона.",
         keyboards.single_app_button("Сканировать QR", user_id, "scan"),
     )
 
 
-@dp.message_callback(F.callback.payload.startswith("claim_"))
-async def callback_claim(callback: MessageCallback):
+@dp.message_callback(F.callback.payload.startswith("inv_"))
+async def callback_accept_invite(callback: MessageCallback):
     user_id = callback.callback.user.user_id
-    match = re.fullmatch(r"claim_(\d+)_([\w-]+)", callback.callback.payload or "")
+    token = (callback.callback.payload or "").removeprefix("inv_")
     await callback.ack()
-    if not match:
-        return
-    emp_id, token = int(match.group(1)), match.group(2)
     db = SessionLocal()
     try:
-        fac = facility_by_invite(db, token)
-        emp = db.get(Employee, emp_id)
-        if not fac or not emp or emp.facility_id != fac.id or emp.archived:
-            await _reply(user_id, "Приглашение устарело. Попросите у руководителя новую ссылку.")
+        emp = employee_by_invite(db, token)
+        if not emp:
+            await _reply(user_id, "Приглашение уже использовано или устарело. Попросите руководителя прислать новое.")
             return
-        if employee_of(db, user_id):
-            await _reply(user_id, "Ваш аккаунт уже привязан к сотруднику.")
-            await _send_home(user_id)
+        try:
+            claim_invite(db, emp, user_id)
+        except ValueError as e:
+            await _reply(user_id, str(e))
             return
-        if emp.user_id:
-            await _reply(user_id, "Этот профиль уже занят. Выберите себя из свободных или обратитесь к руководителю.")
-            return
-        emp.user_id = user_id
-        db.commit()
+        fac = emp.facility
         await notifier.send_staff_joined(fac, emp)
         await _reply(
             user_id,

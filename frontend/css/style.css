@@ -804,3 +804,5 @@ h3.zone { font-size: 14px; color: var(--muted); font-weight: 600; margin: 14px 0
 .stack .chat-btn { margin-top: 0; }
 
 .zone-filter { margin: 10px 0 2px; }
+
+.row-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }

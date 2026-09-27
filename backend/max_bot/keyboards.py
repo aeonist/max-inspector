@@ -88,11 +88,8 @@ def end_shift_confirm(left: int) -> InlineKeyboardBuilder:
     return builder
 
 
-def claim_profiles(profiles, token: str) -> InlineKeyboardBuilder:
-    builder = InlineKeyboardBuilder()
-    for emp in profiles:
-        builder.row(CallbackButton(text=f"{emp.full_name} — {emp.position}", payload=f"claim_{emp.id}_{token}"))
-    return builder
+def accept_invite(token: str) -> InlineKeyboardBuilder:
+    return InlineKeyboardBuilder().row(CallbackButton(text="Да, это я", payload=f"inv_{token}", intent=Intent.POSITIVE))
 
 
 def defect_card(user_id: int, defect_id: int) -> InlineKeyboardBuilder:

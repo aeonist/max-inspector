@@ -56,10 +56,6 @@ class DefectFixRequest(BaseModel):
     photos: list[str] = Field(default=[], max_length=10)
 
 
-class ClaimRequest(BaseModel):
-    employee_id: int
-
-
 class TaskRequest(BaseModel):
     done: bool
     photos: list[str] = Field(default=[], max_length=10)

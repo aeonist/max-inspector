@@ -132,6 +132,8 @@ class Employee(Base):
     full_name = Column(String(255), nullable=False)
     position = Column(String(100), nullable=False)
     is_owner = Column(Boolean, default=False)
+    # Personal one-time invite: whoever opens it becomes this employee
+    invite_token = Column(String(32), index=True, nullable=True)
     # Removed from staff; kept for shift and fix history
     archived = Column(Boolean, default=False)
 

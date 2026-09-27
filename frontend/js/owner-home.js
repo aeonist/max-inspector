@@ -84,7 +84,7 @@ function homeView(state) {
     <section class="section">
       <h2>Документы и команда</h2>
       <div class="tiles">
-        <button type="button" class="tile" data-act="goInvite"><span class="tile-icon">🔗</span>QR для сотрудников</button>
+        <button type="button" class="tile" data-act="goInvite"><span class="tile-icon">👥</span>Команда и приглашения</button>
         <button type="button" class="tile" data-act="downloadAct"><span class="tile-icon">📄</span>Акт аудита (PDF)</button>
       </div>
     </section>
@@ -133,11 +133,13 @@ function shiftNowSection(state) {
             <span class="muted small block">${p.position}${p.on_shift ? html` · с ${p.shift_started}${geoNote(p)}` : ""}</span></span>
           ${p.on_shift
             ? html`<span class="person-right"><span class="badge badge-ok">на смене</span><span class="small muted">задачи ${p.tasks_done}/${p.tasks_total}</span></span>`
-            : html`<span class="badge">${p.linked ? "не на смене" : "ждёт входа по QR"}</span>`}
+            : html`<span class="badge">${p.linked ? "не на смене" : "не в MAX"}</span>`}
         </li>`
       )}
     </ul>
-    ${onShift ? "" : html`<p class="muted small">Сотрудники начинают смену кнопкой в чате с ботом.</p>`}
+    ${people.some((p) => !p.linked)
+      ? html`<button type="button" class="btn-link small" data-act="goInvite">Пригласить тех, кто не в MAX ›</button>`
+      : onShift ? "" : html`<p class="muted small">Сотрудники начинают смену кнопкой в чате с ботом.</p>`}
   </section>`;
 }
 
@@ -253,49 +255,89 @@ Actions.resolveOwnerTask = async (el) => {
   }
 };
 
-// Invite the team: QR on screen, share to a MAX chat, printable poster
-Screens.invite = {
+// Team: everyone with their MAX status; personal invites one by one or to everyone
+Screens.team = {
   async render() {
     await loadScreen(
-      "Подключить команду",
-      () => api("GET", "/api/owner/invite"),
-      (invite) => {
-        App.invite = invite;
-        return html`<section class="card center">
-            <div class="qr">${raw(invite.qr_svg)}</div>
-            <p>Сотрудник наводит камеру телефона на QR или сканирует его в MAX — и выбирает себя из списка команды.</p>
-          </section>
-          <div class="stack">
-            <button type="button" class="btn btn-primary" data-act="shareInvite">Отправить ссылку в рабочий чат</button>
-            <button type="button" class="btn btn-secondary" data-act="copyInvite">Скопировать ссылку</button>
-            <button type="button" class="btn btn-secondary" data-act="downloadPoster">🖨 Плакат для кухни (PDF)</button>
-          </div>
-          <p class="muted small center">В списке будут те, кого вы добавили в команду. Добавить людей можно в настройках.</p>`;
-      }
+      "Команда",
+      async () => {
+        const state = await api("GET", "/api/owner/state");
+        App.ownerState = state;
+        return state;
+      },
+      (state) => teamView(state)
     );
   },
 };
 
-Actions.shareInvite = (el) =>
+function teamView(state) {
+  const waiting = state.staff.filter((p) => !p.linked && !p.is_owner);
+  return html`<p class="muted small">У каждого сотрудника личная ссылка: кто её откроет, тот и станет этим сотрудником. После входа ссылка сгорает.</p>
+    <ul class="list card">
+      ${state.staff.map(
+        (p) => html`<li class="list-row">
+          <span><strong>${p.full_name}</strong>${p.is_owner ? " (вы)" : ""}<span class="muted small block">${p.position}</span></span>
+          <span class="row-actions">
+            ${p.linked
+              ? html`<span class="badge badge-ok">в MAX</span>`
+              : html`<button type="button" class="btn btn-small btn-primary" data-act="inviteOne" data-id="${p.id}">Пригласить</button>`}
+            ${p.is_owner ? "" : html`<button type="button" class="icon-btn" data-act="staffMenu" data-id="${p.id}" aria-label="Действия">⋯</button>`}
+          </span>
+        </li>`
+      )}
+    </ul>
+    <button type="button" class="btn btn-secondary" data-act="addStaff">+ Добавить сотрудника</button>
+    ${waiting.length
+      ? html`<div class="stack">
+          <button type="button" class="btn btn-primary" data-act="inviteAll">📨 Отправить приглашения всем · ${waiting.length}</button>
+          <p class="muted small center">Бот пришлёт вам в чат готовое сообщение для каждого — останется переслать его человеку.</p>
+        </div>`
+      : html`<p class="muted small center">Все в MAX ✓</p>`}
+    ${chatButton()}`;
+}
+
+// One person: share the personal link to their MAX chat, or show the QR to scan from this screen
+Actions.inviteOne = (el) =>
   busy(el, async () => {
-    const text = `Подключайтесь к сменам в MAX: откройте ссылку и выберите себя в списке`;
-    const shared = await Bridge.shareToMax(text, App.invite.url);
-    if (!shared) Actions.copyInvite();
+    const person = App.ownerState.staff.find((p) => p.id === Number(el.dataset.id));
+    App.invite = await api("POST", `/api/owner/staff/${person.id}/invite`);
+    sheet(
+      html`<h3>Приглашение: ${person.full_name}</h3>
+        <p class="muted small">Ссылка личная и сработает один раз — отправьте её только этому человеку.</p>
+        <button type="button" class="btn btn-primary" data-act="shareInviteOne">📤 Отправить в MAX</button>
+        <p class="muted small center">или пусть отсканирует QR с вашего экрана в MAX</p>
+        <div class="qr">${raw(App.invite.qr_svg)}</div>
+        <button type="button" class="btn btn-secondary" data-act="copyInvite">Скопировать ссылку</button>`,
+      [{ label: "Закрыть", value: null }]
+    );
   });
+
+Actions.shareInviteOne = async () => {
+  try {
+    if (await Bridge.shareToMax(App.invite.text, App.invite.url)) return;
+  } catch (e) {
+    console.warn("shareMaxContent failed:", e);
+  }
+  await Actions.copyInvite();
+};
 
 Actions.copyInvite = async () => {
   try {
-    await navigator.clipboard.writeText(App.invite.url);
-    toast("Ссылка скопирована ✓", { type: "success" });
+    await navigator.clipboard.writeText(`${App.invite.text}\n${App.invite.url}`);
+    toast("Приглашение скопировано ✓ Вставьте его в чат с сотрудником", { type: "success" });
   } catch (e) {
     sheet(html`<h3>Ссылка-приглашение</h3><input type="text" readonly value="${App.invite.url}">`, [{ label: "Закрыть", value: null }]);
   }
 };
 
-Actions.downloadPoster = (el) =>
+Actions.inviteAll = (el) =>
   busy(el, async () => {
-    const file = App.invite.files.poster;
-    await Bridge.download(file.url, file.file_name);
+    const res = await api("POST", "/api/owner/invites/send");
+    toast(`В чат с ботом пришло приглашений: ${res.sent}. Перешлите каждое сотруднику`, {
+      type: "success",
+      duration: 6000,
+      action: { label: "Открыть чат", fn: () => Bridge.close() },
+    });
   });
 
 // Settings: facility params, team, location, audit restart, legal note
@@ -326,15 +368,8 @@ function settingsView(state) {
 
     <section class="section">
       <h2>Команда</h2>
-      <ul class="list card">
-        ${state.staff.map(
-          (p) => html`<li class="list-row">
-            <span><strong>${p.full_name}</strong>${p.is_owner ? " (вы)" : ""}<span class="muted small block">${p.position} · ${p.linked ? "в MAX" : "ждёт входа по QR"}</span></span>
-            ${p.is_owner ? "" : html`<button type="button" class="icon-btn" data-act="staffMenu" data-id="${p.id}" aria-label="Действия">⋯</button>`}
-          </li>`
-        )}
-      </ul>
-      <button type="button" class="btn btn-secondary" data-act="addStaff">+ Добавить сотрудника</button>
+      <p class="muted small">${state.staff.length} ${plural(state.staff.length, "человек", "человека", "человек")}, в MAX: ${state.staff.filter((p) => p.linked).length}</p>
+      <button type="button" class="btn btn-secondary" data-act="goInvite">Команда и приглашения</button>
     </section>
 
     <section class="section">
@@ -398,7 +433,7 @@ Actions.addStaff = async () => {
   if (!person || !person.full_name) return;
   try {
     await api("POST", "/api/owner/staff", person);
-    toast(`${person.full_name} в команде. Пусть отсканирует QR`, { type: "success" });
+    toast(`${person.full_name} в команде. Отправьте приглашение`, { type: "success" });
     await Router.refresh();
   } catch (e) {
     toastError(e);

@@ -131,3 +131,18 @@ def facility(client, sent):
 
 def pytest_sessionfinish(session, exitstatus):
     shutil.rmtree(_DATA, ignore_errors=True)
+
+
+# Personal invite for a staff member of the fixture facility, accepted by user_id
+def invite_token(client, full_name: str) -> str:
+    staff = client.get("/api/owner/state", headers=headers(OWNER)).json()["staff"]
+    emp_id = next(s["id"] for s in staff if s["full_name"] == full_name)
+    res = client.post(f"/api/owner/staff/{emp_id}/invite", headers=headers(OWNER))
+    assert res.status_code == 200, res.text
+    return res.json()["url"].split("inv_")[1]
+
+
+def join(client, user_id: int, full_name: str) -> None:
+    token = invite_token(client, full_name)
+    res = client.post(f"/api/invite/{token}", headers=headers(user_id))
+    assert res.status_code == 200, res.text

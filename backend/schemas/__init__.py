@@ -1,6 +1,5 @@
 from schemas.requests import (
     AnswerRequest,
-    ClaimRequest,
     CustomDuty,
     DefectFixRequest,
     DefectResolveRequest,
@@ -16,7 +15,6 @@ from schemas.requests import (
 
 __all__ = [
     "AnswerRequest",
-    "ClaimRequest",
     "CustomDuty",
     "DefectFixRequest",
     "DefectResolveRequest",

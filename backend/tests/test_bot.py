@@ -1,6 +1,6 @@
 import asyncio
 
-from conftest import OWNER, STAFF, headers
+from conftest import OWNER, STAFF, headers, invite_token, join
 
 from database import SessionLocal
 from max_bot import handlers
@@ -38,7 +38,7 @@ def test_owner_location_sets_facility_place(client, facility, sent):
 def test_staff_far_away_cannot_open_shift(client, facility, sent):
     client.put("/api/owner/setup", headers=headers(OWNER), json={**_setup(), "geo_required": True})
     run(handlers._handle_location(OWNER, *KAZAN))
-    _join_as(client, facility, STAFF, "Мария Петрова")
+    join(client, STAFF, "Мария Петрова")
 
     run(handlers._handle_location(STAFF, *FAR_AWAY))
     assert "Отправьте геопозицию, когда будете на месте" in sent.to(STAFF)[-1]["text"]
@@ -54,22 +54,23 @@ def test_staff_far_away_cannot_open_shift(client, facility, sent):
 
 def test_shift_without_facility_place_is_marked(client, facility, sent):
     client.put("/api/owner/setup", headers=headers(OWNER), json={**_setup(), "geo_required": True})
-    _join_as(client, facility, STAFF, "Мария Петрова")
+    join(client, STAFF, "Мария Петрова")
     run(handlers._handle_location(STAFF, *FAR_AWAY))
     assert "Место не проверено" in sent.to(STAFF)[-1]["text"]
     # The owner is asked to mark the place instead of the bot pretending geo is off
     assert "место заведения не отмечено" in sent.to(OWNER)[-1]["text"]
 
 
-def test_join_via_deep_link_lists_free_profiles(client, facility, sent):
-    token = facility["invite_url"].split("join_")[1]
-    run(handlers._handle_join(STAFF, token))
+def test_personal_invite_via_deep_link(client, facility, sent):
+    token = invite_token(client, "Мария Петрова")
+    run(handlers._handle_payload(STAFF, f"inv_{token}"))
     message = sent.to(STAFF)[-1]
-    assert "Кто вы?" in message["text"]
-    buttons = message["attachments"][0].payload.buttons
-    labels = [row[0].text for row in buttons]
-    assert "Мария Петрова — Повар" in labels
-    assert not any("Алия" in label for label in labels)  # the owner's profile is taken
+    assert "Вы — Мария Петрова, Повар?" in message["text"]
+    assert message["attachments"][0].payload.buttons[0][0].payload == f"inv_{token}"
+
+    # Old team-wide links explain what to do instead of failing silently
+    run(handlers._handle_payload(STAFF, "join_oldtoken"))
+    assert "личное приглашение" in sent.to(STAFF)[-1]["text"]
 
 
 def test_owner_home_shows_readiness_and_shift_button(client, facility, sent):
@@ -87,10 +88,3 @@ def _setup() -> dict:
         "positions": ["Повар", "Официант"],
         "owner_works_shift": True,
     }
-
-
-def _join_as(client, facility, user_id, name):
-    token = facility["invite_url"].split("join_")[1]
-    free = client.get(f"/api/join/{token}", headers=headers(user_id)).json()["free"]
-    emp_id = next(e["id"] for e in free if e["full_name"] == name)
-    assert client.post(f"/api/join/{token}", headers=headers(user_id), json={"employee_id": emp_id}).status_code == 200

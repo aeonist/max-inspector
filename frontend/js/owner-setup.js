@@ -156,12 +156,12 @@ function setupStep2() {
               (p) => html`<li class="list-row">
                 <span><strong>${p.full_name}</strong><span class="muted"> · ${p.position}</span></span>
                 ${p.existing
-                  ? html`<span class="badge ${p.linked ? "badge-ok" : ""}">${p.linked ? "в MAX" : "ждёт входа"}</span>`
+                  ? html`<span class="badge ${p.linked ? "badge-ok" : ""}">${p.linked ? "в MAX" : "не в MAX"}</span>`
                   : html`<button type="button" class="icon-btn" data-act="removeNewStaff" data-index="${p.index}" aria-label="Убрать">✕</button>`}
               </li>`
             )}
           </ul>`
-        : html`<p class="muted small">Добавьте сотрудников — каждый потом выберет себя в списке, отсканировав QR-код.</p>`}
+        : html`<p class="muted small">Добавьте сотрудников — после настройки отправите каждому личное приглашение в MAX.</p>`}
       <div class="add-person">
         <input id="fStaffName" type="text" maxlength="120" placeholder="Имя и фамилия">
         <div class="chips chips-small" id="staffPosChips">
@@ -449,7 +449,7 @@ Screens.setupDone = {
         ${needsGeo ? html`<p class="notice">📍 Мы отправили в чат кнопку — отметьте заведение на карте, когда будете на месте.</p>` : ""}
         <button type="button" class="next-step" data-act="goInvite">
           <span class="next-num">1</span>
-          <span><strong>Подключите команду</strong><span class="muted">QR-плакат для кухни или ссылка в рабочий чат</span></span>
+          <span><strong>Пригласите команду</strong><span class="muted">Каждому — личная ссылка в MAX</span></span>
         </button>
         <button type="button" class="next-step" data-act="goAudit">
           <span class="next-num">2</span>
@@ -462,6 +462,6 @@ Screens.setupDone = {
 };
 
 // Audit and invite always sit on top of the cabinet, so "back" leads there
-Actions.goInvite = () => Router.go("invite", {}, { base: "home" });
+Actions.goInvite = () => Router.go("team", {}, { base: "home" });
 Actions.goAudit = () => Router.go("audit", {}, { base: "home" });
 Actions.goHome = () => Router.go("home", {}, { reset: true });

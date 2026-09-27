@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 
 from api.deps import bad_request, get_owner_facility, uploaded_photos
 from database import get_db
-from max_bot.instance import bot_username
 from models import Defect, Employee, Facility, InspectionSession
 from schemas import (
     AnswerRequest,
@@ -17,29 +16,25 @@ from schemas import (
 from services import audit, notifier
 from services.auth import CurrentUser, current_user, make_file_token
 from services.facility import (
+    active_staff,
     add_employee,
     archive_employee,
     detach_facility,
-    ensure_invite_token,
+    ensure_employee_invite,
     facility_state,
+    invite_link,
     save_setup,
     set_owner_works_shift,
     staff_to_dict,
 )
 from services.report import qr_svg
+from services.shifts import active_shift
 from utils.timefmt import utcnow
 
 router = APIRouter(prefix="/api/owner", tags=["owner"])
 
 # The cabinet can stay open a while before the owner taps "download"
 FILE_LINK_TTL_S = 6 * 3600
-
-
-def invite_url(db: Session, facility: Facility) -> str | None:
-    username = bot_username()
-    if not username:
-        return None
-    return f"https://max.ru/{username}?start=join_{ensure_invite_token(db, facility)}"
 
 
 # Links for WebApp.downloadFile: the MAX client downloads without our headers,
@@ -50,15 +45,11 @@ def _file_links(facility: Facility) -> dict:
             "url": f"/api/files/report/{make_file_token('report', facility.id, FILE_LINK_TTL_S)}.pdf",
             "file_name": f"Акт внутреннего аудита — {facility.name}.pdf",
         },
-        "poster": {
-            "url": f"/api/files/poster/{make_file_token('poster', facility.id, FILE_LINK_TTL_S)}.pdf",
-            "file_name": f"QR для сотрудников — {facility.name}.pdf",
-        },
     }
 
 
 def _state(db: Session, facility: Facility) -> dict:
-    state = facility_state(db, facility, invite_url(db, facility))
+    state = facility_state(db, facility)
     state["files"] = _file_links(facility)
     return state
 
@@ -178,9 +169,51 @@ def unlink_staff(employee_id: int, facility: Facility = Depends(get_owner_facili
     emp = _staff_member(db, facility, employee_id)
     if emp.is_owner:
         raise HTTPException(status_code=400, detail="Свой аккаунт отвязать нельзя")
+    shift = active_shift(db, emp)
+    if shift:
+        shift.ended_at = utcnow()
     emp.user_id = None
     db.commit()
     return staff_to_dict(db, emp)
+
+
+def _invite_text(facility: Facility, emp: Employee) -> str:
+    return (
+        f"{emp.full_name}, вас приглашают в команду «{facility.name}» ({emp.position}) в МАХ-Инспекторе. "
+        "Откройте ссылку — она личная и сработает один раз."
+    )
+
+
+# Personal invite: share it to the person in MAX or let them scan the QR from the owner's screen
+@router.post("/staff/{employee_id}/invite")
+def invite_staff(employee_id: int, facility: Facility = Depends(get_owner_facility), db: Session = Depends(get_db)):
+    emp = _staff_member(db, facility, employee_id)
+    try:
+        url = invite_link(ensure_employee_invite(db, emp))
+    except ValueError as e:
+        raise bad_request(e)
+    if not url:
+        raise HTTPException(status_code=503, detail="Бот ещё не готов, попробуйте через минуту")
+    return {"url": url, "text": _invite_text(facility, emp), "qr_svg": qr_svg(url)}
+
+
+# Every personal invite goes to the owner's chat as a message ready to forward
+@router.post("/invites/send")
+async def send_invites(facility: Facility = Depends(get_owner_facility), db: Session = Depends(get_db)):
+    waiting = [e for e in active_staff(db, facility) if not e.user_id and not e.is_owner]
+    if not waiting:
+        raise HTTPException(status_code=400, detail="Все сотрудники уже в MAX")
+    await notifier.send_owner_note(
+        facility,
+        f"📨 Личные приглашения: {len(waiting)}. Перешлите каждое сообщение ниже своему сотруднику — "
+        "ссылка в нём работает один раз и только для этого человека.",
+    )
+    sent = 0
+    for emp in waiting:
+        url = invite_link(ensure_employee_invite(db, emp))
+        if url and await notifier.send_invite_to_owner(facility, emp, _invite_text(facility, emp), url):
+            sent += 1
+    return {"sent": sent, "total": len(waiting)}
 
 
 @router.get("/audit")
@@ -278,9 +311,3 @@ def resolve_defect(
     return {"defect": audit.defect_to_dict(defect, facility), "summary": audit.summary(db, facility)}
 
 
-@router.get("/invite")
-def get_invite(facility: Facility = Depends(get_owner_facility), db: Session = Depends(get_db)):
-    url = invite_url(db, facility)
-    if not url:
-        raise HTTPException(status_code=503, detail="Бот ещё не готов, попробуйте через минуту")
-    return {"url": url, "qr_svg": qr_svg(url), "files": _file_links(facility)}

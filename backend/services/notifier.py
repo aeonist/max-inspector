@@ -111,6 +111,17 @@ async def send_fix_returned(employee: Employee, defect: Defect) -> bool:
     return await _send(employee.user_id, text, [keyboard.as_markup()])
 
 
+async def send_owner_note(facility: Facility, text: str) -> bool:
+    return bool(facility.owner_user_id) and await _send(facility.owner_user_id, text, [])
+
+
+# Personal invite for the owner to forward to the employee (the bot cannot write to them first)
+async def send_invite_to_owner(facility: Facility, employee: Employee, text: str, url: str) -> bool:
+    if not facility.owner_user_id:
+        return False
+    return await _send(facility.owner_user_id, f"{text}\n{url}", [])
+
+
 async def send_staff_joined(facility: Facility, employee: Employee) -> bool:
     if not facility.owner_user_id or facility.owner_user_id == employee.user_id:
         return False

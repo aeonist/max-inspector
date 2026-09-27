@@ -1,14 +1,6 @@
-from conftest import OWNER, STAFF, headers
+from conftest import OWNER, STAFF, headers, join
 
 FRYER_ITEM = 26  # "Контролируется ли ежедневно фритюрный жир…", cook's duty with a reference photo
-
-
-def _join(client, owner_state, user_id, full_name):
-    token = owner_state["invite_url"].split("join_")[1]
-    free = client.get(f"/api/join/{token}", headers=headers(user_id)).json()["free"]
-    emp = next(e for e in free if e["full_name"] == full_name)
-    res = client.post(f"/api/join/{token}", headers=headers(user_id), json={"employee_id": emp["id"]})
-    assert res.status_code == 200, res.text
 
 
 def test_full_cycle_on_one_account(client, facility, sent, upload):
@@ -46,7 +38,7 @@ def test_full_cycle_on_one_account(client, facility, sent, upload):
 
 
 def test_staff_fix_is_returned_with_reason(client, facility, sent, upload):
-    _join(client, facility, STAFF, "Мария Петрова")
+    join(client, STAFF, "Мария Петрова")
     h_owner, h_staff = headers(OWNER), headers(STAFF)
     defect = client.put(
         f"/api/owner/audit/{FRYER_ITEM}", headers=h_owner, json={"status": "violation", "photos": [upload(OWNER)]}
@@ -78,7 +70,7 @@ def test_violation_goes_to_owner_when_position_is_empty(client, facility, upload
 
 
 def test_other_staff_cannot_fix_foreign_task(client, facility, upload):
-    _join(client, facility, STAFF, "Айдар Галиев")  # a waiter
+    join(client, STAFF, "Айдар Галиев")  # a waiter
     defect = client.put(
         f"/api/owner/audit/{FRYER_ITEM}", headers=headers(OWNER), json={"status": "violation", "photos": [upload(OWNER)]}
     ).json()["defect"]
@@ -98,7 +90,7 @@ def test_shift_tasks(client, facility):
     waiter_item = next(k for k, v in facility["assignments"].items() if v == "Официант")
     assert client.post(f"/api/shift/tasks/{waiter_item}", headers=h, json={"done": True}).status_code == 200
     # A waiter cannot mark a cook's duty
-    _join(client, facility, STAFF, "Айдар Галиев")
+    join(client, STAFF, "Айдар Галиев")
     client.post("/api/shift/start", headers=headers(STAFF))
     cook_item = next(k for k, v in facility["assignments"].items() if v == "Повар")
     assert client.post(f"/api/shift/tasks/{cook_item}", headers=headers(STAFF), json={"done": True}).status_code == 404

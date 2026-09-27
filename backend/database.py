@@ -28,6 +28,7 @@ MIGRATIONS = {
     "employees": {
         "is_owner": "BOOLEAN DEFAULT 0",
         "archived": "BOOLEAN DEFAULT 0",
+        "invite_token": "VARCHAR(32)",
     },
     "inspection_sessions": {
         "finished_at": "DATETIME",

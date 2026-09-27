@@ -5,7 +5,6 @@ from api.deps import bad_request, get_employee, uploaded_photos
 from database import get_db
 from models import Defect, Employee
 from schemas import (
-    ClaimRequest,
     DefectFixRequest,
     EndShiftRequest,
     ProblemRequest,
@@ -14,7 +13,7 @@ from schemas import (
 from services import audit, notifier
 from services.auth import CurrentUser, current_user
 from services.checklist import duties_for_employee
-from services.facility import active_staff, employee_of, facility_by_invite
+from services.facility import claim_invite, employee_by_invite, employee_of
 from services.shifts import (
     active_shift,
     close_shift,
@@ -27,44 +26,33 @@ from utils.timefmt import format_local_time
 router = APIRouter(prefix="/api", tags=["staff"])
 
 
-# Invite page: facility name and free staff profiles to pick from
-@router.get("/join/{token}")
-def get_join(token: str, user: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
-    facility = facility_by_invite(db, token)
-    if not facility:
-        raise HTTPException(status_code=404, detail="Приглашение не найдено или устарело")
+# Personal invite page: who the link is for and where
+@router.get("/invite/{token}")
+def get_invite(token: str, user: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
+    emp = employee_by_invite(db, token)
+    if not emp:
+        raise HTTPException(status_code=404, detail="Приглашение уже использовано или устарело. Попросите руководителя прислать новое")
     me = employee_of(db, user.user_id)
     return {
-        "facility_name": facility.name,
-        "is_owner": facility.owner_user_id == user.user_id,
-        "already_member": bool(me and me.facility_id == facility.id),
-        "other_facility": me.facility.name if me and me.facility_id != facility.id else None,
-        "free": [
-            {"id": e.id, "full_name": e.full_name, "position": e.position}
-            for e in active_staff(db, facility)
-            if not e.user_id
-        ],
+        "facility_name": emp.facility.name,
+        "full_name": emp.full_name,
+        "position": emp.position,
+        "is_owner": emp.facility.owner_user_id == user.user_id,
+        "other_facility": me.facility.name if me else None,
     }
 
 
-@router.post("/join/{token}")
-async def post_join(
-    token: str, payload: ClaimRequest, user: CurrentUser = Depends(current_user), db: Session = Depends(get_db)
-):
-    facility = facility_by_invite(db, token)
-    if not facility:
-        raise HTTPException(status_code=404, detail="Приглашение не найдено или устарело")
-    if employee_of(db, user.user_id):
-        raise HTTPException(status_code=409, detail="Ваш аккаунт уже привязан к сотруднику")
-    emp = db.get(Employee, payload.employee_id)
-    if not emp or emp.facility_id != facility.id or emp.archived:
-        raise HTTPException(status_code=404, detail="Сотрудник не найден")
-    if emp.user_id:
-        raise HTTPException(status_code=409, detail="Этот профиль уже занят")
-    emp.user_id = user.user_id
-    db.commit()
-    await notifier.send_staff_joined(facility, emp)
-    return {"full_name": emp.full_name, "position": emp.position, "facility_name": facility.name}
+@router.post("/invite/{token}")
+async def accept_invite(token: str, user: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
+    emp = employee_by_invite(db, token)
+    if not emp:
+        raise HTTPException(status_code=404, detail="Приглашение уже использовано или устарело. Попросите руководителя прислать новое")
+    try:
+        claim_invite(db, emp, user.user_id)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    await notifier.send_staff_joined(emp.facility, emp)
+    return {"full_name": emp.full_name, "position": emp.position, "facility_name": emp.facility.name}
 
 
 def _shift_payload(db: Session, emp: Employee) -> dict:

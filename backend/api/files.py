@@ -4,11 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from api.owner import invite_url
 from database import get_db
 from models import Facility
 from services.auth import verify_file_token
-from services.report import build_act_pdf, build_poster_pdf
+from services.report import build_act_pdf
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 
@@ -30,12 +29,3 @@ def _pdf(content: bytes, file_name: str) -> Response:
 def get_report(token: str, db: Session = Depends(get_db)):
     facility = _facility(db, token, "report")
     return _pdf(build_act_pdf(db, facility), f"Акт внутреннего аудита — {facility.name}.pdf")
-
-
-@router.get("/poster/{token}.pdf")
-def get_poster(token: str, db: Session = Depends(get_db)):
-    facility = _facility(db, token, "poster")
-    url = invite_url(db, facility)
-    if not url:
-        raise HTTPException(status_code=503, detail="Бот ещё не готов, попробуйте через минуту")
-    return _pdf(build_poster_pdf(facility, url), f"QR для сотрудников — {facility.name}.pdf")

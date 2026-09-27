@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from config import GEO_RADIUS_M
+from max_bot.instance import bot_username
 from models import Employee, Facility
 from services import audit
 from services.checklist import CUSTOM_DUTY_BASE_ID, OWNER_POSITION, default_assignments
@@ -24,10 +25,41 @@ def employee_of(db: Session, user_id: int) -> Employee | None:
     return db.query(Employee).filter(Employee.user_id == user_id).order_by(Employee.id.desc()).first()
 
 
-def facility_by_invite(db: Session, token: str) -> Facility | None:
+# Staff member a personal invite belongs to (not yet joined, not removed)
+def employee_by_invite(db: Session, token: str) -> Employee | None:
     if not token:
         return None
-    return db.query(Facility).filter(Facility.invite_token == token).first()
+    return (
+        db.query(Employee)
+        .filter(Employee.invite_token == token, Employee.archived.isnot(True), Employee.user_id.is_(None))
+        .first()
+    )
+
+
+def ensure_employee_invite(db: Session, emp: Employee) -> str:
+    if emp.user_id:
+        raise ValueError(f"{emp.full_name} уже в MAX")
+    if not emp.invite_token:
+        emp.invite_token = generate_invite_token(db)
+        db.commit()
+    return emp.invite_token
+
+
+def invite_link(token: str) -> str | None:
+    username = bot_username()
+    return f"https://max.ru/{username}?start=inv_{token}" if username else None
+
+
+# The person who opened the invite becomes this employee; the link stops working
+def claim_invite(db: Session, emp: Employee, user_id: int) -> None:
+    current = employee_of(db, user_id)
+    if current and current.id != emp.id:
+        raise ValueError(f"Ваш аккаунт уже привязан к «{current.facility.name}». Попросите прежнего руководителя отвязать его.")
+    if emp.facility.owner_user_id == user_id:
+        raise ValueError("Это приглашение для сотрудника — перешлите его ему")
+    emp.user_id = user_id
+    emp.invite_token = None
+    db.commit()
 
 
 def create_facility(db: Session, owner_user_id: int) -> Facility:
@@ -39,7 +71,6 @@ def create_facility(db: Session, owner_user_id: int) -> Facility:
         name="Моё заведение",
         owner_user_id=owner_user_id,
         geo_required=True,
-        invite_token=generate_invite_token(db),
         setup_done=False,
     )
     db.add(facility)
@@ -47,11 +78,6 @@ def create_facility(db: Session, owner_user_id: int) -> Facility:
     return facility
 
 
-def ensure_invite_token(db: Session, facility: Facility) -> str:
-    if not facility.invite_token:
-        facility.invite_token = generate_invite_token(db)
-        db.commit()
-    return facility.invite_token
 
 
 def _clean(text: str | None, limit: int = MAX_NAME_LEN) -> str:
@@ -195,6 +221,7 @@ def staff_to_dict(db: Session, emp: Employee) -> dict:
         "position": emp.position,
         "linked": emp.user_id is not None,
         "is_owner": bool(emp.is_owner),
+        "invited": bool(emp.invite_token),
         "on_shift": shift is not None,
         "shift_started": format_local_time(shift.started_at) if shift else None,
         "geo_status": shift.geo_status if shift else None,
@@ -205,7 +232,7 @@ def staff_to_dict(db: Session, emp: Employee) -> dict:
 
 
 # Everything the owner's cabinet shows, in one response
-def facility_state(db: Session, facility: Facility, invite_url: str | None) -> dict:
+def facility_state(db: Session, facility: Facility) -> dict:
     staff = active_staff(db, facility)
     owner_emp = next((e for e in staff if e.is_owner), None)
     defects = [audit.defect_to_dict(d, facility) for d in audit.unresolved_defects(db, facility)]
@@ -227,5 +254,4 @@ def facility_state(db: Session, facility: Facility, invite_url: str | None) -> d
         "staff": [staff_to_dict(db, e) for e in staff],
         "summary": audit.summary(db, facility),
         "defects": defects,
-        "invite_url": invite_url,
     }

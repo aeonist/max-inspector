@@ -7,8 +7,8 @@ const Staff = { shift: null, problemPhotos: [], zone: "all" };
 Screens.join = {
   async render({ token }) {
     await loadScreen(
-      "Подключение",
-      () => api("GET", `/api/join/${encodeURIComponent(token)}`),
+      "Приглашение",
+      () => api("GET", `/api/invite/${encodeURIComponent(token)}`),
       (info) => joinView(info, token),
       { back: Router.stack.length > 1 }
     );
@@ -19,15 +19,8 @@ function joinView(info, token) {
   if (info.is_owner) {
     return html`<div class="empty">
       <div class="empty-icon">🔗</div>
-      <p>Это приглашение в ваше заведение «${info.facility_name}». Отправьте его сотрудникам.</p>
+      <p>Это личное приглашение для сотрудника ${info.full_name}. Перешлите его ему.</p>
       <button type="button" class="btn btn-primary" data-act="goHome">В кабинет</button>
-    </div>`;
-  }
-  if (info.already_member) {
-    return html`<div class="empty">
-      <div class="empty-icon">✅</div>
-      <p>Вы уже в команде «${info.facility_name}».</p>
-      <button type="button" class="btn btn-primary" data-act="goShiftReset">Моя смена</button>
     </div>`;
   }
   if (info.other_facility) {
@@ -36,32 +29,39 @@ function joinView(info, token) {
       <p>Вы уже подключены к «${info.other_facility}». Чтобы перейти в «${info.facility_name}», попросите прежнего руководителя отвязать ваш аккаунт.</p>
     </div>`;
   }
-  if (!info.free.length) {
-    return html`<div class="empty">
-      <div class="empty-icon">👥</div>
-      <p>В команде «${info.facility_name}» пока нет свободных мест. Попросите руководителя добавить вас и отсканируйте QR ещё раз.</p>
-    </div>`;
-  }
-  return html`<p class="lead">Подключаемся к «${info.facility_name}». Кто вы?</p>
-    <div class="stack">
-      ${info.free.map(
-        (p) => html`<button type="button" class="person-pick" data-act="claimProfile" data-id="${p.id}" data-token="${token}" data-name="${p.full_name}" data-position="${p.position}">
-          <strong>${p.full_name}</strong><span class="muted">${p.position}</span>
-        </button>`
-      )}
-    </div>
-    <p class="muted small center">Нет себя в списке? Попросите руководителя добавить вас в команду.</p>`;
+  return html`<div class="empty">
+    <div class="empty-icon">👋</div>
+    <p class="lead">Приглашение в команду «${info.facility_name}»</p>
+    <h2>Вы — ${info.full_name}, ${info.position}?</h2>
+    <button type="button" class="btn btn-primary" data-act="acceptInvite" data-token="${token}">Да, это я</button>
+    <p class="muted small">Если это не вы — закройте приглашение и сообщите руководителю.</p>
+  </div>`;
 }
 
-Actions.claimProfile = async (el) => {
-  const { id, token, name, position } = el.dataset;
-  if (!(await confirmSheet(`Вы — ${name}?`, `Должность: ${position}. Аккаунт MAX привяжется к этому профилю.`, "Да, это я"))) return;
-  await busy(el, async () => {
-    const res = await api("POST", `/api/join/${encodeURIComponent(token)}`, { employee_id: Number(id) });
+Actions.acceptInvite = (el) =>
+  busy(el, async () => {
+    const res = await api("POST", `/api/invite/${encodeURIComponent(el.dataset.token)}`);
     App.me = await api("GET", "/api/me");
     Bridge.haptic("success");
     await Router.go("joined", res, { reset: true });
   });
+
+// Links of the first version: one link for the whole team
+Screens.legacyJoin = {
+  async render() {
+    mount(
+      "#app",
+      screen(
+        "Приглашение",
+        html`<div class="empty">
+          <div class="empty-icon">🔗</div>
+          <p>Эта ссылка больше не работает: теперь у каждого сотрудника личное приглашение. Попросите руководителя прислать его.</p>
+          ${chatButton()}
+        </div>`,
+        { back: false }
+      )
+    );
+  },
 };
 
 Screens.joined = {
@@ -92,7 +92,7 @@ Screens.scan = {
         "Подключение",
         html`<div class="empty">
           <div class="empty-icon">📷</div>
-          <p>Отсканируйте QR-код с плаката в заведении или откройте ссылку-приглашение от руководителя.</p>
+          <p>Попросите руководителя прислать вам личное приглашение в MAX — или отсканируйте QR с экрана его телефона.</p>
           ${Bridge.inMax
             ? html`<button type="button" class="btn btn-primary" data-act="scanInvite">Сканировать QR</button>`
             : html`<p class="muted small">Наведите камеру телефона на QR-код — откроется чат с ботом.</p>`}
@@ -111,8 +111,8 @@ Actions.scanInvite = (el) =>
     } catch (e) {
       throw new ApiError("Не получилось отсканировать. Попробуйте ещё раз", 0);
     }
-    const match = value.match(/join_([\w-]+)/);
-    if (!match) throw new ApiError("Это не QR-код МАХ-Инспектора. Попросите у руководителя плакат или ссылку", 0);
+    const match = value.match(/inv_([\w-]+)/);
+    if (!match) throw new ApiError("Это не приглашение МАХ-Инспектора. Попросите руководителя показать ваш QR", 0);
     await Router.go("join", { token: match[1] });
   });
 

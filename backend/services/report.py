@@ -1,6 +1,6 @@
 import io
 
-from reportlab.graphics import renderPDF, renderSVG
+from reportlab.graphics import renderSVG
 from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.graphics.shapes import Drawing
 from reportlab.lib import colors
@@ -9,7 +9,6 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen import canvas
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from sqlalchemy.orm import Session
 
@@ -163,37 +162,3 @@ def qr_svg(url: str, size: int = 240) -> str:
     svg = renderSVG.drawToString(_qr_drawing(url, size))
     # Drop the XML prolog and doctype so the markup can be inlined in HTML
     return svg[svg.index("<svg"):]
-
-
-# Printable A4 poster for the kitchen: staff scan it to join shifts
-def build_poster_pdf(facility: Facility, invite_url: str) -> bytes:
-    _register_fonts()
-    buf = io.BytesIO()
-    width, height = A4
-    c = canvas.Canvas(buf, pagesize=A4)
-    c.setTitle(f"Плакат для сотрудников — {facility.name}")
-
-    c.setFont("DejaVu-Bold", 26)
-    c.drawCentredString(width / 2, height - 40 * mm, f"Команда «{facility.name[:28]}»")
-    c.setFont("DejaVu", 15)
-    c.drawCentredString(width / 2, height - 52 * mm, "Подключитесь к сменам в MAX")
-
-    qr_size = 120 * mm
-    renderPDF.draw(_qr_drawing(invite_url, qr_size), c, (width - qr_size) / 2, height - 60 * mm - qr_size)
-
-    steps = [
-        "1. Наведите камеру телефона на QR-код или отсканируйте его в MAX.",
-        "2. В чате с ботом нажмите «Начать».",
-        "3. Выберите себя из списка сотрудников.",
-    ]
-    c.setFont("DejaVu", 13)
-    y = height - 75 * mm - qr_size
-    for step in steps:
-        c.drawString(30 * mm, y, step)
-        y -= 9 * mm
-    c.setFont("DejaVu", 9)
-    c.setFillColor(colors.HexColor("#666666"))
-    c.drawCentredString(width / 2, 18 * mm, invite_url)
-    c.showPage()
-    c.save()
-    return buf.getvalue()

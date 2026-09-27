@@ -69,7 +69,8 @@ async function renderOpenFromBot() {
 function route(param) {
   const me = App.me;
   const opts = { reset: true };
-  if (param.startsWith("join_")) return Router.go("join", { token: param.slice(5) }, opts);
+  if (param.startsWith("inv_")) return Router.go("join", { token: param.slice(4) }, opts);
+  if (param.startsWith("join_")) return Router.go("legacyJoin", {}, opts);
   if (param === "scan" && !me.employee) return Router.go("scan", {}, opts);
   if (param.startsWith("defect_") && me.employee) return Router.go("shift", { focus: Number(param.slice(7)) }, opts);
   if (param === "shift" && me.employee) return Router.go("shift", {}, opts);
