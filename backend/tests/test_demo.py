@@ -12,7 +12,7 @@ def test_demo_cafe_has_the_whole_cycle_ready(client, sent):
     statuses = sorted(d["status"] for d in state["defects"])
     assert statuses == ["fixed", "open", "open"]
     review = next(d for d in state["defects"] if d["status"] == "fixed")
-    assert review["before_photo"].startswith("/uploads/") and review["after_photo"].startswith("/uploads/")
+    assert review["before_photos"][0].startswith("/uploads/") and review["after_photos"][0].startswith("/uploads/")
 
     # Accepting the waiting fix raises the index
     res = client.post(f"/api/owner/defects/{review['id']}/accept", headers=h).json()

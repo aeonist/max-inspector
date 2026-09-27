@@ -31,7 +31,7 @@ def test_conditional_items_become_not_applicable(client, facility):
 def test_index_and_progress_are_different(client, facility, upload):
     h = headers(OWNER)
     # One violation on an owner item (documents): progress grows, index does not
-    res = client.put("/api/owner/audit/1", headers=h, json={"status": "violation", "photo_url": upload(OWNER)})
+    res = client.put("/api/owner/audit/1", headers=h, json={"status": "violation", "photos": [upload(OWNER)]})
     assert res.status_code == 200, res.text
     summary = res.json()["summary"]
     assert summary["answered"] == facility["summary"]["answered"] + 1
@@ -49,15 +49,15 @@ def test_foreign_photo_url_is_rejected(client, facility):
     res = client.put(
         "/api/owner/audit/10",
         headers=headers(OWNER),
-        json={"status": "violation", "photo_url": "/uploads/../../inspector.db"},
+        json={"status": "violation", "photos": ["/uploads/../../inspector.db"]},
     )
     assert res.status_code == 400
 
 
 def test_answer_change_cancels_defect(client, facility, upload):
     h = headers(OWNER)
-    client.put("/api/owner/audit/10", headers=h, json={"status": "violation", "photo_url": upload(OWNER)})
-    res = client.put("/api/owner/audit/10", headers=h, json={"status": "compliant"})
+    client.put("/api/owner/audit/10", headers=h, json={"status": "violation", "photos": [upload(OWNER)]})
+    res = client.put("/api/owner/audit/10", headers=h, json={"status": "compliant", "photos": [upload(OWNER)]})
     assert res.json()["defect"] is None
     assert res.json()["summary"]["unresolved"] == 0
 
@@ -82,22 +82,26 @@ def test_staff_management(client, facility):
     assert "Ильдар" not in names
 
 
-def test_compliant_photo_becomes_reference(client, facility, upload):
+def test_compliant_requires_photo_and_keeps_several(client, facility, upload):
     h = headers(OWNER)
+    assert client.put("/api/owner/audit/10", headers=h, json={"status": "compliant"}).status_code == 400
+
+    photos = [upload(OWNER), upload(OWNER), upload(OWNER)]
+    res = client.put("/api/owner/audit/26", headers=h, json={"status": "compliant", "photos": photos})
+    assert res.json()["answer"]["photos"] == photos
+    # The first photo becomes the facility's "as it should be" reference
+    assert client.get("/api/owner/state", headers=h).json()["reference_photos"]["26"] == photos[0]
+    assert client.get("/api/owner/audit", headers=h).json()["answers"]["26"]["photos"] == photos
+
+    # "Not applicable" never keeps photos
+    res = client.put("/api/owner/audit/11", headers=h, json={"status": "na", "photos": [upload(OWNER)]})
+    assert res.json()["answer"]["photos"] == []
+
+
+def test_too_many_photos_are_rejected(client, facility, upload):
     photo = upload(OWNER)
-    res = client.put("/api/owner/audit/26", headers=h, json={"status": "compliant", "photo_url": photo})
-    assert res.json()["answer"]["photo_url"] == photo
-    assert res.json()["summary"]["compliant_photo"] == 1
-    assert client.get("/api/owner/state", headers=h).json()["reference_photos"]["26"] == photo
-
-    # Compliant without a photo is allowed, but counted separately
-    res = client.put("/api/owner/audit/10", headers=h, json={"status": "compliant"})
-    summary = res.json()["summary"]
-    assert summary["compliant"] == 2 and summary["compliant_photo"] == 1
-
-    # "Not applicable" never keeps a photo
-    res = client.put("/api/owner/audit/11", headers=h, json={"status": "na", "photo_url": upload(OWNER)})
-    assert res.json()["answer"]["photo_url"] is None
+    res = client.put("/api/owner/audit/26", headers=headers(OWNER), json={"status": "compliant", "photos": [photo] * 11})
+    assert res.status_code == 422
 
 
 def test_owner_switches_employee_role(client, facility):
@@ -121,3 +125,11 @@ def test_owner_switches_employee_role(client, facility):
     # The name can be set from the role switch (the link mode has no MAX profile name)
     state = client.put("/api/owner/shift-role", headers=h, json={"works": True, "position": "Повар", "name": "Алия Х."}).json()
     assert next(s for s in state["staff"] if s["is_owner"])["full_name"] == "Алия Х."
+
+
+def test_owner_audit_task_needs_result_photo(client, facility, upload):
+    h = headers(OWNER)
+    defect = client.put("/api/owner/audit/1", headers=h, json={"status": "violation", "photos": [upload(OWNER)]}).json()["defect"]
+    assert client.post(f"/api/owner/defects/{defect['id']}/resolve", headers=h, json={}).status_code == 400
+    res = client.post(f"/api/owner/defects/{defect['id']}/resolve", headers=h, json={"photos": [upload(OWNER)]})
+    assert res.json()["defect"]["status"] == "accepted"

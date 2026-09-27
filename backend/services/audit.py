@@ -37,7 +37,7 @@ def answers_by_item(db: Session, session: InspectionSession) -> dict[int, Inspec
     return {a.item_id: a for a in rows}
 
 
-def _upsert_answer(db: Session, session, item_id: int, status: str, source: str, photo_url=None):
+def _upsert_answer(db: Session, session, item_id: int, status: str, source: str, photos: list[str]):
     answer = (
         db.query(InspectionAnswer)
         .filter(InspectionAnswer.session_id == session.id, InspectionAnswer.item_id == item_id)
@@ -48,7 +48,7 @@ def _upsert_answer(db: Session, session, item_id: int, status: str, source: str,
         db.add(answer)
     answer.status = status
     answer.source = source
-    answer.photo_url = photo_url
+    answer.photos = photos
     answer.updated_at = utcnow()
     return answer
 
@@ -69,7 +69,7 @@ def sync_features(db: Session, facility: Facility) -> None:
         answer = answers.get(item["id"])
         if is_not_applicable(item, facility.features):
             if not answer or answer.source == "features":
-                _upsert_answer(db, session, item["id"], "na", "features")
+                _upsert_answer(db, session, item["id"], "na", "features", [])
         elif answer and answer.source == "features":
             db.delete(answer)
     db.commit()
@@ -135,7 +135,7 @@ def set_answer(
     facility: Facility,
     item_id: int,
     status: str,
-    photo_url: str | None = None,
+    photos: list[str],
     assign_to: str | None = None,
 ) -> tuple[InspectionAnswer, Defect | None, bool]:
     item = get_item(item_id)
@@ -143,20 +143,23 @@ def set_answer(
         raise ValueError("Пункт проверочного листа не найден")
     if status not in ANSWER_STATUSES:
         raise ValueError("Неизвестный ответ")
-    if status == "violation" and not photo_url:
+    # Both answers are backed by photos, the way the inspector will see the place
+    if status == "violation" and not photos:
         raise ValueError("Сфотографируйте нарушение")
+    if status == "compliant" and not photos:
+        raise ValueError("Сфотографируйте, что требование соблюдается")
 
     if status == "na":
-        photo_url = None
+        photos = []
 
     session = current_session(db, facility)
-    answer = _upsert_answer(db, session, item_id, status, "user", photo_url)
+    answer = _upsert_answer(db, session, item_id, status, "user", photos)
     defect = _unresolved_for_item(db, facility, item_id)
     created = False
 
     # A photo confirming compliance becomes this facility's "as it should be" reference
-    if status == "compliant" and photo_url:
-        _set_reference(facility, item_id, photo_url)
+    if status == "compliant":
+        _set_reference(facility, item_id, photos[0])
 
     if status == "violation":
         position, to_owner = resolve_assignee(db, facility, item, assign_to)
@@ -168,8 +171,8 @@ def set_answer(
         defect.assigned_position = position
         defect.to_owner = to_owner
         defect.status = "open"
-        defect.before_photo = photo_url
-        defect.after_photo = None
+        defect.before_photos = photos
+        defect.after_photos = []
         defect.return_reason = None
         defect.created_at = utcnow()
     elif defect:
@@ -205,11 +208,11 @@ def defect_recipients(db: Session, facility: Facility, defect: Defect) -> list[E
     return []
 
 
-def mark_fixed(db: Session, defect: Defect, employee: Employee, photo_url: str) -> None:
+def mark_fixed(db: Session, defect: Defect, employee: Employee, photos: list[str]) -> None:
     if defect.status not in ("open", "returned"):
         raise ValueError("Это нарушение уже на проверке или закрыто")
     defect.status = "fixed"
-    defect.after_photo = photo_url
+    defect.after_photos = photos
     defect.fixed_by_employee_id = employee.id
     defect.fixed_at = utcnow()
     db.commit()
@@ -226,9 +229,9 @@ def accept_defect(db: Session, defect: Defect) -> None:
     if defect.item_id:
         facility = db.get(Facility, defect.facility_id)
         session = current_session(db, facility)
-        _upsert_answer(db, session, defect.item_id, "compliant", "fix", defect.after_photo)
-        if defect.after_photo:
-            _set_reference(facility, defect.item_id, defect.after_photo)
+        _upsert_answer(db, session, defect.item_id, "compliant", "fix", defect.after_photos)
+        if defect.after_photos:
+            _set_reference(facility, defect.item_id, defect.after_photos[0])
     db.commit()
 
 
@@ -240,10 +243,12 @@ def return_defect(db: Session, defect: Defect, reason: str) -> None:
     db.commit()
 
 
-# Owner closes their own task (documents, premises) without a review step
-def resolve_by_owner(db: Session, defect: Defect, photo_url: str | None) -> None:
-    if photo_url:
-        defect.after_photo = photo_url
+# Owner closes their own task directly; an audit item needs a photo of the result
+def resolve_by_owner(db: Session, defect: Defect, photos: list[str]) -> None:
+    if defect.item_id and not photos:
+        raise ValueError("Сфотографируйте результат")
+    if photos:
+        defect.after_photos = photos
         defect.fixed_at = utcnow()
     accept_defect(db, defect)
 
@@ -256,9 +261,6 @@ def summary(db: Session, facility: Facility) -> dict:
     total = len(items)
     statuses = [answers[i["id"]].status for i in items if i["id"] in answers]
     compliant = statuses.count("compliant")
-    compliant_photo = sum(
-        1 for i in items if i["id"] in answers and answers[i["id"]].status == "compliant" and answers[i["id"]].photo_url
-    )
     violations = statuses.count("violation")
     na = statuses.count("na")
     applicable = total - na
@@ -283,7 +285,6 @@ def summary(db: Session, facility: Facility) -> dict:
         "started": any(a.source != "features" for a in answers.values()),
         "progress": round(len(statuses) / total * 100) if total else 0,
         "compliant": compliant,
-        "compliant_photo": compliant_photo,
         "violations": violations,
         "na": na,
         "applicable": applicable,
@@ -350,8 +351,8 @@ def defect_to_dict(defect: Defect, facility: Facility) -> dict:
         "status": defect.status,
         "assigned_position": defect.assigned_position,
         "to_owner": bool(defect.to_owner),
-        "before_photo": defect.before_photo,
-        "after_photo": defect.after_photo,
+        "before_photos": defect.before_photos,
+        "after_photos": defect.after_photos,
         "reference_photo": reference_photo_url(facility, defect.item_id),
         "return_reason": defect.return_reason,
         "fixed_by": defect.fixed_by.full_name if defect.fixed_by else None,

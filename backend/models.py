@@ -30,6 +30,11 @@ def _dump(value) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+# Several photos in a JSON column; the legacy single-photo column keeps the first one
+def _photos(photos_json, first_url) -> list[str]:
+    return _load(photos_json, []) or ([first_url] if first_url else [])
+
+
 # Facility model
 class Facility(Base):
     __tablename__ = "facilities"
@@ -173,8 +178,18 @@ class ShiftTask(Base):
     item_id = Column(Integer, nullable=False)
     done_at = Column(DateTime, default=utcnow, nullable=False)
     photo_url = Column(String(500), nullable=True)
+    photos_json = Column(Text, default="[]")
 
     shift = relationship("Shift", back_populates="tasks")
+
+    @property
+    def photos(self) -> list[str]:
+        return _photos(self.photos_json, self.photo_url)
+
+    @photos.setter
+    def photos(self, value: list[str]):
+        self.photos_json = _dump(value)
+        self.photo_url = value[0] if value else None
 
 
 # Owner's internal audit against the inspection checklist
@@ -208,9 +223,19 @@ class InspectionAnswer(Base):
     source = Column(String(20), default="user")
     comment = Column(Text, nullable=True)
     photo_url = Column(String(500), nullable=True)
+    photos_json = Column(Text, default="[]")
     updated_at = Column(DateTime, default=utcnow)
 
     session = relationship("InspectionSession", back_populates="answers")
+
+    @property
+    def photos(self) -> list[str]:
+        return _photos(self.photos_json, self.photo_url)
+
+    @photos.setter
+    def photos(self, value: list[str]):
+        self.photos_json = _dump(value)
+        self.photo_url = value[0] if value else None
 
 
 # Violation found in the audit (or reported by staff) and its fix cycle
@@ -233,6 +258,8 @@ class Defect(Base):
     status = Column(String(20), default="open", index=True)
     before_photo = Column(String(500), nullable=True)
     after_photo = Column(String(500), nullable=True)
+    before_photos_json = Column(Text, default="[]")
+    after_photos_json = Column(Text, default="[]")
     return_reason = Column(String(255), nullable=True)
     reported_by_employee_id = Column(Integer, ForeignKey("employees.id"), nullable=True)
     fixed_by_employee_id = Column(Integer, ForeignKey("employees.id"), nullable=True)
@@ -241,3 +268,21 @@ class Defect(Base):
     closed_at = Column(DateTime, nullable=True)
 
     fixed_by = relationship("Employee", foreign_keys=[fixed_by_employee_id])
+
+    @property
+    def before_photos(self) -> list[str]:
+        return _photos(self.before_photos_json, self.before_photo)
+
+    @before_photos.setter
+    def before_photos(self, value: list[str]):
+        self.before_photos_json = _dump(value)
+        self.before_photo = value[0] if value else None
+
+    @property
+    def after_photos(self) -> list[str]:
+        return _photos(self.after_photos_json, self.after_photo)
+
+    @after_photos.setter
+    def after_photos(self, value: list[str]):
+        self.after_photos_json = _dump(value)
+        self.after_photo = value[0] if value else None

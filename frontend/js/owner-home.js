@@ -157,7 +157,7 @@ Actions.teamDefect = (el) => {
     html`<p class="muted small">${d.zone} · ${d.assigned_position} · ${DEFECT_STATUS[d.status]}</p>
       <h3>${d.title}</h3>
       ${d.return_reason ? html`<p class="notice small">↩️ Вернули: ${d.return_reason}</p>` : ""}
-      ${photoPair(d.before_photo, "Как сейчас", d.reference_photo, "Как должно быть")}
+      ${photoPair(d.before_photos, "Как сейчас", d.reference_photo, "Как должно быть")}
       ${d.remediation ? html`<p><strong>Что сделать:</strong> ${d.remediation}</p>` : ""}
       <p class="muted small">Задача у должности «${d.assigned_position}». Когда пришлют фото исправления, оно появится в «Ждут вашей проверки».</p>`,
     [{ label: "Закрыть", value: null }]
@@ -174,7 +174,7 @@ function reviewCard(d) {
   return html`<article class="card defect-card">
     <p class="muted small">${d.fixed_by ? html`${d.fixed_by} · ` : ""}${d.fixed_at || ""}</p>
     <h3>${d.title}</h3>
-    ${photoPair(d.before_photo, "Было", d.after_photo, "Стало")}
+    ${photoPair(d.before_photos, "Было", d.after_photos, "Стало")}
     <div class="row-buttons">
       <button type="button" class="btn btn-primary" data-act="acceptFix" data-id="${d.id}">Принять</button>
       <button type="button" class="btn btn-secondary" data-act="returnFix" data-id="${d.id}">Вернуть</button>
@@ -189,11 +189,13 @@ function ownerTaskCard(d) {
     <h3>${d.title}</h3>
     ${isProblem && d.comment && d.comment !== d.title ? html`<p>${d.comment}</p>` : ""}
     ${d.remediation ? html`<p><strong>Что сделать:</strong> ${d.remediation}</p>` : ""}
-    ${d.before_photo || d.reference_photo ? photoPair(d.before_photo, "Как сейчас", d.reference_photo, "Как должно быть") : ""}
-    <div class="row-buttons">
-      <button type="button" class="btn btn-secondary" data-act="resolveWithPhoto" data-id="${d.id}">${photoLabel("результат")}</button>
-      <button type="button" class="btn btn-secondary" data-act="resolveOwnerTask" data-id="${d.id}">${isProblem ? "Решено" : "Устранено"}</button>
-    </div>
+    ${d.before_photos.length || d.reference_photo ? photoPair(d.before_photos, "Как сейчас", d.reference_photo, "Как должно быть") : ""}
+    ${isProblem
+      ? html`<div class="row-buttons">
+          <button type="button" class="btn btn-secondary" data-act="resolveWithPhoto" data-id="${d.id}">${photoLabel("результат")}</button>
+          <button type="button" class="btn btn-secondary" data-act="resolveOwnerTask" data-id="${d.id}">Решено</button>
+        </div>`
+      : html`<button type="button" class="btn btn-secondary" data-act="resolveWithPhoto" data-id="${d.id}">${photoLabel("результат")}</button>`}
   </article>`;
 }
 
@@ -229,29 +231,25 @@ Actions.returnFix = async (el) => {
   });
 };
 
-async function resolveOwnerTask(el, photoUrl) {
+async function resolveOwnerTask(el, photos) {
   await busy(el, async () => {
-    const res = await api("POST", `/api/owner/defects/${el.dataset.id}/resolve`, { photo_url: photoUrl });
+    const res = await api("POST", `/api/owner/defects/${el.dataset.id}/resolve`, { photos });
     Bridge.haptic("success");
     toast(`Готово ✓ Готовность: ${res.summary.index}%`, { type: "success" });
     await Router.refresh();
   });
 }
 
-// Own task closed with an "after" photo (camera opens right from the tap)
-Actions.resolveWithPhoto = (el) => {
-  pickPhoto().then(async (file) => {
-    if (!file) return;
-    const photoUrl = await busy(el, () => uploadPhoto(file));
-    if (photoUrl) await resolveOwnerTask(el, photoUrl);
-  });
+// Own task closed with photos of the result (the camera opens right from the tap)
+Actions.resolveWithPhoto = async (el) => {
+  const photos = await collectPhotos({ title: "Результат", note: "Покажите, что всё исправлено.", confirm: "Устранено" });
+  if (photos) await resolveOwnerTask(el, photos);
 };
 
+// A problem reported by staff can be closed without a photo
 Actions.resolveOwnerTask = async (el) => {
-  const defect = App.ownerState.defects.find((d) => d.id === Number(el.dataset.id));
-  const note = defect && defect.item_id ? "Пункт аудита станет «Соблюдается»." : "Задача закроется.";
-  if (await confirmSheet("Отметить устранённым?", note, "Да, устранено")) {
-    await resolveOwnerTask(el, null);
+  if (await confirmSheet("Проблема решена?", "Сообщение сотрудника закроется.", "Да, решено")) {
+    await resolveOwnerTask(el, []);
   }
 };
 

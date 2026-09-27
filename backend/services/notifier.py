@@ -12,9 +12,32 @@ from services.checklist import get_item
 logger = logging.getLogger(__name__)
 
 
-def _media(*urls) -> list[InputMedia]:
+# Photos per group in one chat message; the rest are in the mini-app
+CHAT_PHOTOS_PER_GROUP = 4
+
+
+def _media(urls) -> list[InputMedia]:
     paths = [audit.local_photo_path(u) for u in urls]
     return [InputMedia(str(p)) for p in paths if p]
+
+
+# Two groups of photos in one message and a caption telling them apart
+def _photo_groups(first: list[str], first_label: str, second: list[str], second_label: str) -> tuple[list, str]:
+    a = _media(first[:CHAT_PHOTOS_PER_GROUP])
+    b = _media(second[:CHAT_PHOTOS_PER_GROUP])
+
+    def span(start: int, count: int) -> str:
+        if count == 1:
+            return f"фото {start}"
+        return f"фото {start}–{start + count - 1}"
+
+    parts = []
+    if a:
+        parts.append(f"{span(1, len(a))} — {first_label}")
+    if b:
+        parts.append(f"{span(len(a) + 1, len(b))} — {second_label}")
+    caption = ", ".join(parts)
+    return [*a, *b], (caption[0].upper() + caption[1:] + ".") if caption else ""
 
 
 async def _send(user_id: int, text: str, attachments: list) -> bool:
@@ -26,19 +49,21 @@ async def _send(user_id: int, text: str, attachments: list) -> bool:
         return False
 
 
-# Violation card: photo 1 — as it is now, photo 2 — as it should be
+# Violation card: photos as it is now, then the "as it should be" reference
 async def send_defect_card(db: Session, facility: Facility, defect: Defect) -> list[str]:
     recipients = audit.defect_recipients(db, facility, defect)
     if not recipients:
         return []
     item = get_item(defect.item_id) or {}
     reference = audit.reference_photo_url(facility, defect.item_id)
-    media = _media(defect.before_photo, reference)
+    media, caption = _photo_groups(
+        defect.before_photos, "как сейчас", [reference] if reference else [], "как должно быть"
+    )
 
     lines = [f"⚠️ Нарушение: {defect.title}"]
-    if len(media) == 2:
-        lines.append("Фото 1 — как сейчас, фото 2 — как должно быть.")
-    elif item.get("photo_hint"):
+    if caption:
+        lines.append(caption)
+    if not reference and item.get("photo_hint"):
         lines.append(f"Как должно быть: {item['photo_hint']}.")
     if item.get("remediation"):
         lines.append(f"Что сделать: {item['remediation']}")
@@ -59,12 +84,12 @@ async def send_defect_card(db: Session, facility: Facility, defect: Defect) -> l
 async def send_review_card(facility: Facility, defect: Defect, employee: Employee) -> bool:
     if not facility.owner_user_id:
         return False
+    media, caption = _photo_groups(defect.before_photos, "было", defect.after_photos, "стало")
     text = (
         f"🔍 Исправление на проверку: {defect.title}\n"
         f"Исправил(а): {employee.full_name}, {employee.position}.\n"
-        "Фото 1 — было, фото 2 — стало. Принять?"
+        f"{caption} Принять?"
     )
-    media = _media(defect.before_photo, defect.after_photo)
     return await _send(facility.owner_user_id, text, [*media, keyboards.review(defect.id).as_markup()])
 
 
@@ -100,7 +125,7 @@ async def send_problem(facility: Facility, defect: Defect, employee: Employee) -
         return False
     text = f"📣 {employee.full_name} ({employee.position}) сообщает о проблеме:\n{defect.comment or defect.title}"
     keyboard = keyboards.single_app_button("Открыть кабинет", facility.owner_user_id, "home")
-    return await _send(facility.owner_user_id, text, [*_media(defect.before_photo), keyboard.as_markup()])
+    return await _send(facility.owner_user_id, text, [*_media(defect.before_photos[:CHAT_PHOTOS_PER_GROUP]), keyboard.as_markup()])
 
 
 # After the wizard: ask the owner for the facility location right in the chat

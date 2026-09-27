@@ -86,7 +86,6 @@ def build_act_pdf(db: Session, facility: Facility) -> bytes:
         ("Дата формирования", format_local_datetime(utcnow())),
         ("Аудит начат", summary["started_at"] or "—"),
         ("Индекс готовности", f"{summary['index']}% — соблюдается {summary['compliant']} из {summary['applicable']} применимых пунктов"),
-        ("Подтверждено фото", f"{summary['compliant_photo']} из {summary['compliant']} пунктов «Соблюдается»"),
         ("Проверено пунктов", f"{summary['answered']} из {summary['total']}"),
         ("Итог", ready),
     ]
@@ -116,9 +115,8 @@ def build_act_pdf(db: Session, facility: Facility) -> bytes:
         answer = answers.get(item["id"])
         if not answer:
             result = "Не проверено"
-        elif answer.status == "compliant":
-            fixed = " (нарушение устранено)" if answer.source == "fix" else ""
-            result = f"Соблюдается{fixed}, " + ("есть фото" if answer.photo_url else "без фото")
+        elif answer.source == "fix":
+            result = "Соблюдается (нарушение устранено)"
         else:
             result = STATUS_TEXT.get(answer.status, answer.status)
         rows.append([

@@ -297,6 +297,7 @@ function sheet(content, actions = []) {
     );
     const close = (value) => {
       overlay.classList.remove("show");
+      overlay.classList.add("closing");
       setTimeout(() => overlay.remove(), 200);
       document.removeEventListener("sheet:close", onForceClose);
       resolve(value);
@@ -325,46 +326,135 @@ function confirmSheet(title, text, okLabel, kind = "primary") {
   ]);
 }
 
-// Two photos side by side ("было / стало", "как сейчас / как должно быть"); tap to enlarge
-function photoPair(firstUrl, firstCaption, secondUrl, secondCaption) {
+// Two groups of photos ("было / стало", "как сейчас / как должно быть"); tap shows the whole group
+function photoPair(first, firstCaption, second, secondCaption) {
+  const groups = [
+    [first, firstCaption],
+    [second, secondCaption],
+  ]
+    .map(([urls, caption]) => [(Array.isArray(urls) ? urls : [urls]).filter(Boolean), caption])
+    .filter(([urls]) => urls.length);
   return html`<div class="photo-pair">
-    ${[
-      [firstUrl, firstCaption],
-      [secondUrl, secondCaption],
-    ]
-      .filter(([url]) => url)
-      .map(
-        ([url, caption]) => html`<button type="button" class="photo-thumb" data-act="photo" data-src="${url}" data-caption="${caption}">
-          <img src="${url}" alt="" loading="lazy"><span>${caption}</span></button>`
-      )}
+    ${groups.map(
+      ([urls, caption]) => html`<button type="button" class="photo-thumb" data-act="photo" data-srcs="${JSON.stringify(urls)}" data-caption="${caption}">
+        <img src="${urls[0]}" alt="" loading="lazy"><span>${caption}</span>
+        ${urls.length > 1 ? html`<em class="photo-count">+${urls.length - 1}</em>` : ""}
+      </button>`
+    )}
   </div>`;
 }
 
-// Photo viewer
-function showPhoto(url, caption) {
-  sheet(html`<figure class="photo-view"><img src="${url}" alt=""><figcaption>${caption || ""}</figcaption></figure>`, [
-    { label: "Закрыть", value: null },
-  ]);
+// Photo viewer: every photo of a group, one under another
+function showPhotos(urls, caption) {
+  sheet(
+    html`<p class="muted">${caption}${urls.length > 1 ? ` · ${urls.length} фото` : ""}</p>
+      ${urls.map((u) => html`<img class="photo-full" src="${u}" alt="">`)}`,
+    [{ label: "Закрыть", value: null }]
+  );
 }
 
-// Open the camera (or file picker on desktop); must run inside a click handler
-function pickPhoto() {
+// "camera" opens the camera on phones (one shot); "gallery" and desktop allow several files at once.
+// Must run inside a click handler.
+function pickFiles(source = "camera") {
   return new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
-    if (Bridge.isMobile) input.setAttribute("capture", "environment");
+    if (source === "camera" && Bridge.isMobile) input.setAttribute("capture", "environment");
+    else input.multiple = true;
     input.style.display = "none";
-    input.addEventListener("change", () => {
-      resolve(input.files && input.files[0] ? input.files[0] : null);
+    const done = (files) => {
+      resolve(files);
       input.remove();
-    });
-    input.addEventListener("cancel", () => {
-      resolve(null);
-      input.remove();
-    });
+    };
+    input.addEventListener("change", () => done(Array.from(input.files || [])));
+    input.addEventListener("cancel", () => done([]));
     document.body.appendChild(input);
     input.click();
+  });
+}
+
+const MAX_PHOTOS = 10;
+
+// Photos for one answer: the camera first, then a sheet to shoot more, add from the gallery or remove.
+// Resolves with uploaded URLs, or null when cancelled. Must start inside a click handler.
+async function collectPhotos({ title, note = "", confirm = "Готово" }) {
+  const first = await pickFiles("camera");
+  if (!first.length) return null;
+  clearToasts();
+  return new Promise((resolve) => {
+    const shots = [];
+    const overlay = document.createElement("div");
+    overlay.className = "sheet-overlay";
+
+    const add = (files) => {
+      files.slice(0, MAX_PHOTOS - shots.length).forEach((file) => shots.push({ file, preview: URL.createObjectURL(file) }));
+      render();
+    };
+    const finish = (value) => {
+      document.removeEventListener("sheet:close", onForceClose);
+      overlay.classList.remove("show");
+      overlay.classList.add("closing");
+      setTimeout(() => overlay.remove(), 200);
+      shots.forEach((shot) => URL.revokeObjectURL(shot.preview));
+      resolve(value);
+    };
+    const onForceClose = () => finish(null);
+
+    const render = () => {
+      const more = shots.length < MAX_PHOTOS;
+      mount(
+        overlay,
+        html`<div class="sheet" role="dialog">
+          <div class="sheet-handle"></div>
+          <div class="sheet-body">
+            <h3>${title}</h3>
+            ${note ? html`<p class="muted small">${note}</p>` : ""}
+            <div class="shots">
+              ${shots.map(
+                (shot, i) => html`<div class="shot">
+                  <img src="${shot.preview}" alt="">
+                  <button type="button" class="shot-remove" data-cp="remove" data-index="${i}" aria-label="Убрать фото">✕</button>
+                </div>`
+              )}
+            </div>
+            ${more
+              ? html`<div class="${Bridge.isMobile ? "row-buttons" : "stack"}">
+                  <button type="button" class="btn btn-secondary" data-cp="camera">${Bridge.isMobile ? "📷 Ещё фото" : "📎 Добавить фото"}</button>
+                  ${Bridge.isMobile ? html`<button type="button" class="btn btn-secondary" data-cp="gallery">🖼 Из галереи</button>` : ""}
+                </div>`
+              : html`<p class="muted small">Можно прикрепить до ${MAX_PHOTOS} фото.</p>`}
+          </div>
+          <div class="sheet-actions">
+            <button type="button" class="btn btn-primary" data-cp="done" ${raw(shots.length ? "" : "disabled")}>${confirm} · ${shots.length} фото</button>
+            <button type="button" class="btn btn-secondary" data-cp="cancel">Отмена</button>
+          </div>
+        </div>`
+      );
+    };
+
+    overlay.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-cp]");
+      if (!btn) return;
+      const act = btn.dataset.cp;
+      if (act === "remove") {
+        const [shot] = shots.splice(Number(btn.dataset.index), 1);
+        URL.revokeObjectURL(shot.preview);
+        render();
+      } else if (act === "camera" || act === "gallery") {
+        add(await pickFiles(act));
+      } else if (act === "cancel") {
+        finish(null);
+      } else if (act === "done") {
+        const urls = await busy(btn, () => Promise.all(shots.map((shot) => uploadPhoto(shot.file))));
+        if (urls) finish(urls);
+      }
+    });
+
+    document.addEventListener("sheet:close", onForceClose);
+    add(first);
+    document.getElementById("sheet-root").appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add("show"));
   });
 }
 
@@ -432,7 +522,7 @@ document.addEventListener("click", (e) => {
 });
 
 Actions.back = () => Router.back();
-Actions.photo = (el) => showPhoto(el.dataset.src, el.dataset.caption);
+Actions.photo = (el) => showPhotos(el.dataset.srcs ? JSON.parse(el.dataset.srcs) : [el.dataset.src], el.dataset.caption);
 Actions.toggle = (el) => {
   const target = document.getElementById(el.dataset.target);
   if (target) {

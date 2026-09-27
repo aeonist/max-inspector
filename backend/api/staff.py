@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from api.deps import bad_request, get_employee, uploaded_photo
+from api.deps import bad_request, get_employee, uploaded_photos
 from database import get_db
 from models import Defect, Employee
 from schemas import (
@@ -70,11 +70,11 @@ async def post_join(
 def _shift_payload(db: Session, emp: Employee) -> dict:
     facility = emp.facility
     shift = active_shift(db, emp)
-    done = {t.item_id: t.photo_url for t in shift.tasks} if shift else {}
+    done = {t.item_id: t.photos for t in shift.tasks} if shift else {}
     duties = duties_for_position(facility, emp.position)
     for duty in duties:
         duty["done"] = duty["id"] in done
-        duty["photo_url"] = done.get(duty["id"])
+        duty["photos"] = done.get(duty["id"], [])
     defects = [audit.defect_to_dict(d, facility) for d in audit.defects_for_employee(db, emp)]
     return {
         "employee": {"full_name": emp.full_name, "position": emp.position, "is_owner": bool(emp.is_owner)},
@@ -115,7 +115,7 @@ def post_task(item_id: int, payload: TaskRequest, emp: Employee = Depends(get_em
         raise HTTPException(status_code=409, detail="Смена не начата. Начните её в чате с ботом")
     if item_id not in {d["id"] for d in duties_for_position(emp.facility, emp.position)}:
         raise HTTPException(status_code=404, detail="Это не ваша задача")
-    set_task_done(db, shift, item_id, payload.done, uploaded_photo(payload.photo_url))
+    set_task_done(db, shift, item_id, payload.done, uploaded_photos(payload.photos))
     return {"stats": shift_stats(db, emp, shift)}
 
 
@@ -140,7 +140,7 @@ async def fix_defect(
     if not defect or defect.facility_id != emp.facility_id or not audit.is_for_employee(defect, emp):
         raise HTTPException(status_code=404, detail="Задача не найдена")
     try:
-        audit.mark_fixed(db, defect, emp, uploaded_photo(payload.photo_url, required=True))
+        audit.mark_fixed(db, defect, emp, uploaded_photos(payload.photos, required=True))
     except ValueError as e:
         raise bad_request(e)
     await notifier.send_review_card(emp.facility, defect, emp)
@@ -158,9 +158,9 @@ async def report_problem(payload: ProblemRequest, emp: Employee = Depends(get_em
         comment=text,
         to_owner=True,
         status="open",
-        before_photo=uploaded_photo(payload.photo_url),
         reported_by_employee_id=emp.id,
     )
+    defect.before_photos = uploaded_photos(payload.photos)
     db.add(defect)
     db.commit()
     await notifier.send_problem(emp.facility, defect, emp)

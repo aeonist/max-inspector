@@ -91,8 +91,8 @@ function renderAuditItem(id) {
   if (answer && answer.source === "features") answerNote = "Отмечено при настройке: этого у вас нет";
   else if (answer && answer.source === "fix") answerNote = "Нарушение исправлено и принято";
   else if (defect) answerNote = defect.to_owner ? "Нарушение — в ваших задачах" : `Нарушение отправлено: ${defect.assigned_position}`;
-  else if (status === "compliant") answerNote = answer.photo_url ? "Соблюдается, подтверждено фото" : "Соблюдается, отмечено без фото";
-  const answerPhoto = answer && answer.photo_url && status === "compliant" ? answer.photo_url : null;
+  const answerPhotos = answer && answer.status !== "na" ? answer.photos || [] : [];
+  if (!answerNote && status === "compliant") answerNote = `Соблюдается · ${answerPhotos.length} фото`;
 
   mount(
     "#app",
@@ -128,8 +128,8 @@ function renderAuditItem(id) {
             : ""}
           ${basisBlock(item, "basis-" + id)}
           ${answerNote
-            ? html`<p class="answer-note ${status}">${answerNote}${answerPhoto
-                ? html` · <button type="button" class="inline-link" data-act="photo" data-src="${answerPhoto}" data-caption="Фото соблюдения">посмотреть</button>`
+            ? html`<p class="answer-note ${status}">${answerNote}${answerPhotos.length
+                ? html` · <button type="button" class="inline-link" data-act="photo" data-srcs="${JSON.stringify(answerPhotos)}" data-caption="${STATUS_LABELS[status] || "Фото"}">посмотреть фото</button>`
                 : ""}</p>`
             : ""}
         </article>
@@ -139,8 +139,7 @@ function renderAuditItem(id) {
           <button type="button" class="answer bad ${status === "violation" ? "active" : ""}" data-act="answerViolation" data-id="${id}">✕<span>Нарушение</span></button>
           <button type="button" class="answer na ${status === "na" ? "active" : ""}" data-act="answerNa" data-id="${id}">—<span>Не применимо</span></button>
         </div>
-        <p class="answer-hint muted small">Ответ подтверждается фото: так заведение увидит и инспектор.
-          <button type="button" class="inline-link" data-act="answerOkNoPhoto" data-id="${id}">Соблюдается, но без фото</button></p>
+        <p class="answer-hint muted small">Ответ подтверждается фото — можно несколько, как их увидит инспектор.</p>
         <div class="row-between audit-nav">
           ${Audit.prev(id) ? html`<button type="button" class="btn-link" data-act="auditGo" data-id="${Audit.prev(id)}">‹ Предыдущий</button>` : html`<span></span>`}
           ${Audit.next(id) ? html`<button type="button" class="btn-link" data-act="auditGo" data-id="${Audit.next(id)}">Пропустить ›</button>` : html`<button type="button" class="btn-link" data-act="auditDone">К итогам ›</button>`}
@@ -211,50 +210,49 @@ Actions.auditSections = async () => {
   window.scrollTo(0, 0);
 };
 
-// Compliant: camera first, like a violation; the photo also becomes the facility's reference
-Actions.answerOk = (el) => {
+// Compliant: photos first, like a violation; the first one becomes the facility's reference
+Actions.answerOk = async (el) => {
   const id = Number(el.dataset.id);
-  pickPhoto().then(async (file) => {
-    if (!file) return;
-    const photoUrl = await busy(el, () => uploadPhoto(file));
-    if (!photoUrl) return;
-    const res = await saveAnswer(id, { status: "compliant", photo_url: photoUrl }, el);
-    if (res) toast("Соблюдается ✓ Фото сохранено", { type: "success" });
+  const photos = await collectPhotos({
+    title: "Соблюдается",
+    note: "Покажите, как это выглядит сейчас. Первое фото станет эталоном «как должно быть» для сотрудников.",
+    confirm: "Сохранить",
   });
+  if (!photos) return;
+  const res = await saveAnswer(id, { status: "compliant", photos }, el);
+  if (res) toast(`Соблюдается ✓ Фото: ${photos.length}`, { type: "success" });
 };
-
-// Escape hatch: marked "без фото" in the act
-Actions.answerOkNoPhoto = (el) => saveAnswer(Number(el.dataset.id), { status: "compliant" }, el);
 
 Actions.answerNa = (el) => saveAnswer(Number(el.dataset.id), { status: "na" }, el);
 
-// Violation: camera first, then "Send to <position>?"
-Actions.answerViolation = (el) => {
+// Violation: photos first, then "Send to <position>?"
+Actions.answerViolation = async (el) => {
   const id = Number(el.dataset.id);
-  pickPhoto().then(async (file) => {
-    if (!file) return;
-    const photoUrl = await busy(el, () => uploadPhoto(file));
-    if (!photoUrl) return;
-    const assignTo = await chooseAssignee(Checklist.byId[id]);
-    if (assignTo === null) {
-      toast("Нарушение не сохранено", { type: "info" });
-      return;
-    }
-    const res = await saveAnswer(id, { status: "violation", photo_url: photoUrl, assign_to: assignTo }, el);
-    if (!res || !res.defect) return;
-    if (!res.defect.to_owner && res.delivered.length) {
-      toast(`Отправлено: ${res.delivered.join(", ")} ✓`, { type: "success" });
-    } else if (!res.defect.to_owner) {
-      toast(`Задача у должности «${res.defect.assigned_position}», но сообщение в чат не ушло. Сотрудник увидит её в «Моей смене»`, {
-        type: "info",
-        duration: 5000,
-      });
-    } else if ((Checklist.byId[id].task_type || "shift") !== "shift") {
-      toast("Добавлено в ваши задачи ✓", { type: "success" });
-    } else {
-      toast("Задача у вас ✓", { type: "success" });
-    }
+  const photos = await collectPhotos({
+    title: "Нарушение",
+    note: "Снимите, что не так — с разных сторон, если нужно. Эти фото получит ответственный.",
+    confirm: "Далее",
   });
+  if (!photos) return;
+  const assignTo = await chooseAssignee(Checklist.byId[id]);
+  if (assignTo === null) {
+    toast("Нарушение не сохранено", { type: "info" });
+    return;
+  }
+  const res = await saveAnswer(id, { status: "violation", photos, assign_to: assignTo }, el);
+  if (!res || !res.defect) return;
+  if (!res.defect.to_owner && res.delivered.length) {
+    toast(`Отправлено: ${res.delivered.join(", ")} ✓`, { type: "success" });
+  } else if (!res.defect.to_owner) {
+    toast(`Задача у должности «${res.defect.assigned_position}», но сообщение в чат не ушло. Сотрудник увидит её в «Моей смене»`, {
+      type: "info",
+      duration: 5000,
+    });
+  } else if ((Checklist.byId[id].task_type || "shift") !== "shift") {
+    toast("Добавлено в ваши задачи ✓", { type: "success" });
+  } else {
+    toast("Задача у вас ✓", { type: "success" });
+  }
 };
 
 // Resolves with a position, "owner", or null when cancelled
@@ -314,7 +312,6 @@ function auditSummaryView(state) {
   return html`<section class="card center">
       ${readinessRing(s)}
       <p>Соблюдается ${s.compliant} из ${s.applicable} применимых</p>
-      ${s.compliant ? html`<p class="muted small">Подтверждено фото: ${s.compliant_photo} из ${s.compliant}</p>` : ""}
       ${left ? html`<p class="muted small">Осталось проверить: ${left} ${plural(left, "вопрос", "вопроса", "вопросов")}</p>` : ""}
     </section>
     ${state.defects.length

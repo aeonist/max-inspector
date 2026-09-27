@@ -67,14 +67,14 @@ def close_shift(db: Session, employee: Employee, shift: Shift) -> dict:
     return stats
 
 
-def set_task_done(db: Session, shift: Shift, item_id: int, done: bool, photo_url: str | None = None) -> None:
+def set_task_done(db: Session, shift: Shift, item_id: int, done: bool, photos: list[str]) -> None:
     task = db.query(ShiftTask).filter(ShiftTask.shift_id == shift.id, ShiftTask.item_id == item_id).first()
     if done:
         if not task:
             task = ShiftTask(shift_id=shift.id, item_id=item_id)
             db.add(task)
-        if photo_url:
-            task.photo_url = photo_url
+        if photos:
+            task.photos = photos
     elif task:
         db.delete(task)
     db.commit()

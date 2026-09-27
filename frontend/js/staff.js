@@ -1,6 +1,6 @@
 // Staff: join by invite, QR scan, "Моя смена"
 
-const Staff = { shift: null, problemPhoto: null };
+const Staff = { shift: null, problemPhotos: [] };
 
 // ---------- Join ----------
 
@@ -181,7 +181,7 @@ function shiftView(data) {
           ${onReview.map(
             (d) => html`<article class="card defect-card" id="defect-${d.id}">
               <h3>${d.title}</h3>
-              ${photoPair(d.before_photo, "Было", d.after_photo, "Стало")}
+              ${photoPair(d.before_photos, "Было", d.after_photos, "Стало")}
               <p class="muted small">⏳ Руководитель проверит фото и примет исправление</p>
             </article>`
           )}
@@ -200,7 +200,7 @@ function shiftView(data) {
                   (d) => html`<li class="task ${d.done ? "done" : ""}">
                     <button type="button" class="task-check" data-act="toggleTask" data-id="${d.id}" data-done="${d.done ? "1" : ""}" ${raw(shift ? "" : "disabled")}
                       aria-label="${d.done ? "Снять отметку" : "Отметить выполненной"}">${d.done ? "✓" : ""}</button>
-                    <span class="task-text">${d.question}${d.photo_url ? html` <span class="muted small">📷</span>` : ""}</span>
+                    <span class="task-text">${d.question}${d.photos.length ? html` <span class="muted small">📷 ${d.photos.length}</span>` : ""}</span>
                     <button type="button" class="icon-btn" data-act="taskMenu" data-id="${d.id}" aria-label="Подробнее">⋯</button>
                   </li>`
                 )}
@@ -238,7 +238,7 @@ function urgentCard(d) {
     ${d.status === "returned" ? html`<p class="notice small">↩️ Вернули: ${d.return_reason}</p>` : ""}
     <p class="muted small">${d.zone}</p>
     <h3>${d.title}</h3>
-    ${photoPair(d.before_photo, "Как сейчас", d.reference_photo, "Как должно быть")}
+    ${photoPair(d.before_photos, "Как сейчас", d.reference_photo, "Как должно быть")}
     ${!d.reference_photo && d.photo_hint ? html`<p class="small"><strong>Как должно быть:</strong> ${d.photo_hint}</p>` : ""}
     ${d.remediation ? html`<p><strong>Что сделать:</strong> ${d.remediation}</p>` : ""}
     ${basisBlock(Checklist.byId[d.item_id], "dbasis-" + d.id)}
@@ -254,17 +254,19 @@ Actions.startShift = (el) =>
     await Router.refresh();
   });
 
-// After photo goes to the owner as before/after for review
-Actions.fixDefect = (el) => {
-  pickPhoto().then(async (file) => {
-    if (!file) return;
-    await busy(el, async () => {
-      const url = await uploadPhoto(file);
-      await api("POST", `/api/defects/${el.dataset.id}/fix`, { photo_url: url });
-      Bridge.haptic("success");
-      toast("Отправлено руководителю на проверку ✓", { type: "success" });
-      await Router.refresh();
-    });
+// "After" photos go to the owner as before/after for review
+Actions.fixDefect = async (el) => {
+  const photos = await collectPhotos({
+    title: "Исправление",
+    note: "Покажите, как стало. Руководитель сравнит с фото «было».",
+    confirm: "Отправить на проверку",
+  });
+  if (!photos) return;
+  await busy(el, async () => {
+    await api("POST", `/api/defects/${el.dataset.id}/fix`, { photos });
+    Bridge.haptic("success");
+    toast("Отправлено руководителю на проверку ✓", { type: "success" });
+    await Router.refresh();
   });
 };
 
@@ -307,7 +309,9 @@ Actions.taskMenu = (el) => {
         ? html`<button type="button" class="example ok wide" data-act="photo" data-src="/${item.reference_photo}" data-caption="Так правильно">
             <img src="/${item.reference_photo}" alt=""><span>✓ Так правильно</span></button>`
         : ""}
-      ${duty.photo_url ? html`<p class="small">📷 Фото прикреплено</p>` : ""}
+      ${duty.photos.length
+        ? html`<button type="button" class="inline-link" data-act="photo" data-srcs="${JSON.stringify(duty.photos)}" data-caption="Фото выполнения">📷 Фото прикреплено: ${duty.photos.length}</button>`
+        : ""}
       ${Staff.shift.shift
         ? html`<button type="button" class="btn btn-secondary" data-act="taskPhoto" data-id="${duty.id}">${photoLabel("выполнение")}</button>`
         : ""}`,
@@ -316,20 +320,18 @@ Actions.taskMenu = (el) => {
 };
 
 // Optional photo proof of a duty; marks it done
-Actions.taskPhoto = (el) => {
+Actions.taskPhoto = async (el) => {
   const id = Number(el.dataset.id);
-  pickPhoto().then(async (file) => {
-    if (!file) return;
-    document.dispatchEvent(new Event("sheet:close"));
-    try {
-      const url = await uploadPhoto(file);
-      await api("POST", `/api/shift/tasks/${id}`, { done: true, photo_url: url });
-      toast("Фото прикреплено, задача выполнена ✓", { type: "success" });
-      await Router.refresh();
-    } catch (e) {
-      toastError(e);
-    }
-  });
+  const photos = await collectPhotos({ title: "Фото выполнения", confirm: "Прикрепить" });
+  if (!photos) return;
+  document.dispatchEvent(new Event("sheet:close"));
+  try {
+    await api("POST", `/api/shift/tasks/${id}`, { done: true, photos });
+    toast("Фото прикреплено, задача выполнена ✓", { type: "success" });
+    await Router.refresh();
+  } catch (e) {
+    toastError(e);
+  }
 };
 
 Actions.endShift = (el) =>
@@ -355,7 +357,7 @@ Actions.endShift = (el) =>
   });
 
 Actions.reportProblem = async () => {
-  Staff.problemPhoto = null;
+  Staff.problemPhotos = [];
   const text = await sheet(
     html`<h3>Сообщить о проблеме</h3>
       <p class="muted small">Например: сломался холодильник, закончилось дезсредство. Сообщение уйдёт руководителю.</p>
@@ -377,20 +379,17 @@ Actions.reportProblem = async () => {
   );
   if (!text) return;
   try {
-    await api("POST", "/api/problems", { text, photo_url: Staff.problemPhoto });
+    await api("POST", "/api/problems", { text, photos: Staff.problemPhotos });
     toast("Отправлено руководителю ✓", { type: "success" });
   } catch (e) {
     toastError(e);
   }
 };
 
-Actions.problemPhoto = (el) => {
-  pickPhoto().then(async (file) => {
-    if (!file) return;
-    const url = await busy(el, () => uploadPhoto(file));
-    if (url) {
-      Staff.problemPhoto = url;
-      el.textContent = "📷 Фото прикреплено ✓";
-    }
-  });
+Actions.problemPhoto = async (el) => {
+  const photos = await collectPhotos({ title: "Фото проблемы", confirm: "Прикрепить" });
+  if (photos) {
+    Staff.problemPhotos = photos;
+    el.textContent = `📷 Фото прикреплено: ${photos.length} ✓`;
+  }
 };

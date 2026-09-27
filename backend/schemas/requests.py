@@ -41,7 +41,7 @@ class StaffUpdateRequest(BaseModel):
 class AnswerRequest(BaseModel):
     # "compliant" | "violation" | "na"
     status: str
-    photo_url: str | None = None
+    photos: list[str] = Field(default=[], max_length=10)
     # Position name, "owner", or empty for the default assignment
     assign_to: str | None = None
 
@@ -51,11 +51,11 @@ class DefectReturnRequest(BaseModel):
 
 
 class DefectResolveRequest(BaseModel):
-    photo_url: str | None = None
+    photos: list[str] = Field(default=[], max_length=10)
 
 
 class DefectFixRequest(BaseModel):
-    photo_url: str
+    photos: list[str] = Field(default=[], max_length=10)
 
 
 class ClaimRequest(BaseModel):
@@ -64,7 +64,7 @@ class ClaimRequest(BaseModel):
 
 class TaskRequest(BaseModel):
     done: bool
-    photo_url: str | None = None
+    photos: list[str] = Field(default=[], max_length=10)
 
 
 class EndShiftRequest(BaseModel):
@@ -73,4 +73,4 @@ class EndShiftRequest(BaseModel):
 
 class ProblemRequest(BaseModel):
     text: str = Field(min_length=3, max_length=500)
-    photo_url: str | None = None
+    photos: list[str] = Field(default=[], max_length=10)

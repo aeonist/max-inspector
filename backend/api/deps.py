@@ -24,16 +24,18 @@ def get_employee(user: CurrentUser = Depends(current_user), db: Session = Depend
     return employee
 
 
-# Photo reference sent by the client must point to a file uploaded to us
-def uploaded_photo(url: str | None, required: bool = False) -> str | None:
-    if not url:
-        if required:
-            raise HTTPException(status_code=400, detail="Прикрепите фото")
-        return None
-    name = url.removeprefix("/uploads/")
-    if not url.startswith("/uploads/") or "/" in name or not (UPLOADS_DIR / name).is_file():
-        raise HTTPException(status_code=400, detail="Фото не найдено, загрузите его ещё раз")
-    return url
+# Photos sent by the client must point to files uploaded to us
+def uploaded_photos(urls: list[str], required: bool = False) -> list[str]:
+    if not urls and required:
+        raise HTTPException(status_code=400, detail="Прикрепите фото")
+    result = []
+    for url in urls:
+        name = url.removeprefix("/uploads/")
+        if not url.startswith("/uploads/") or "/" in name or not (UPLOADS_DIR / name).is_file():
+            raise HTTPException(status_code=400, detail="Фото не найдено, загрузите его ещё раз")
+        if url not in result:
+            result.append(url)
+    return result
 
 
 def bad_request(error: ValueError) -> HTTPException:

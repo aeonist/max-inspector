@@ -35,6 +35,14 @@ MIGRATIONS = {
     "inspection_answers": {
         "source": "VARCHAR(20) DEFAULT 'user'",
         "updated_at": "DATETIME",
+        "photos_json": "TEXT DEFAULT '[]'",
+    },
+    "defects": {
+        "before_photos_json": "TEXT DEFAULT '[]'",
+        "after_photos_json": "TEXT DEFAULT '[]'",
+    },
+    "shift_tasks": {
+        "photos_json": "TEXT DEFAULT '[]'",
     },
 }
 

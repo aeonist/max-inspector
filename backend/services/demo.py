@@ -37,12 +37,6 @@ DEMO_SETUP = {
     "owner_works_shift": True,
     "owner_position": "Повар",
 }
-# Answered part of the audit: documents, receiving and fridges sections
-DEMO_SECTIONS = {
-    "Документы и производственный контроль",
-    "Приёмка и хранение продукции",
-    "Холодильники и сроки годности",
-}
 # Violations: fryer oil goes to the cook (the owner works as a cook), thermometers are the owner's task
 DEMO_VIOLATIONS = [26, 14]
 # A fix sent by the cook that waits for the owner's review
@@ -72,23 +66,22 @@ def create_demo_facility(db: Session, owner_user_id: int, owner_name: str) -> Fa
     facility = create_facility(db, owner_user_id)
     save_setup(db, facility, {**DEMO_SETUP, "owner_name": owner_name or "Руководитель"}, owner_name)
 
-    # Keep "not applicable" answers set from the features
+    # "Compliant" needs a photo: answered are the items the photo library covers
     answered = audit.answers_by_item(db, audit.current_session(db, facility))
     for item in load_checklist():
         special = item["id"] in DEMO_VIOLATIONS or item["id"] == DEMO_FIX
-        if item["section"] in DEMO_SECTIONS and not special and item["id"] not in answered:
-            has_photo = (FRONTEND_DIR / "img" / "reference" / f"{item['id']}_good.jpg").exists()
-            photo = _library_photo(item["id"], "good") if has_photo else None
-            audit.set_answer(db, facility, item["id"], "compliant", photo)
+        has_photo = (FRONTEND_DIR / "img" / "reference" / f"{item['id']}_good.jpg").exists()
+        if has_photo and not special and item["id"] not in answered:
+            audit.set_answer(db, facility, item["id"], "compliant", [_library_photo(item["id"], "good")])
 
     for item_id in DEMO_VIOLATIONS:
-        audit.set_answer(db, facility, item_id, "violation", _library_photo(item_id, "bad"))
+        audit.set_answer(db, facility, item_id, "violation", [_library_photo(item_id, "bad")])
 
     # The cook Maria has already sent her fix: before/after waits in "Ждут вашей проверки"
-    _, defect, _ = audit.set_answer(db, facility, DEMO_FIX, "violation", _library_photo(DEMO_FIX, "bad"), "Повар")
+    _, defect, _ = audit.set_answer(db, facility, DEMO_FIX, "violation", [_library_photo(DEMO_FIX, "bad")], "Повар")
     cook = db.query(Employee).filter(Employee.facility_id == facility.id, Employee.full_name == "Мария Петрова").one()
     defect.status = "fixed"
-    defect.after_photo = _library_photo(DEMO_FIX, "good")
+    defect.after_photos = [_library_photo(DEMO_FIX, "good")]
     defect.fixed_by_employee_id = cook.id
     defect.fixed_at = utcnow()
     db.commit()

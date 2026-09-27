@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from api.deps import bad_request, get_owner_facility, uploaded_photo
+from api.deps import bad_request, get_owner_facility, uploaded_photos
 from database import get_db
 from max_bot.instance import bot_username
 from models import Defect, Employee, Facility, InspectionSession
@@ -191,7 +191,7 @@ def get_audit(facility: Facility = Depends(get_owner_facility), db: Session = De
     answers = audit.answers_by_item(db, session)
     return {
         "answers": {
-            str(item_id): {"status": a.status, "photo_url": a.photo_url, "source": a.source}
+            str(item_id): {"status": a.status, "photos": a.photos, "source": a.source}
             for item_id, a in answers.items()
         },
         "summary": audit.summary(db, facility),
@@ -206,14 +206,14 @@ async def put_answer(
     facility: Facility = Depends(get_owner_facility),
     db: Session = Depends(get_db),
 ):
-    photo = uploaded_photo(payload.photo_url, required=payload.status == "violation")
+    photos = uploaded_photos(payload.photos)
     try:
-        answer, defect, _ = audit.set_answer(db, facility, item_id, payload.status, photo, payload.assign_to)
+        answer, defect, _ = audit.set_answer(db, facility, item_id, payload.status, photos, payload.assign_to)
     except ValueError as e:
         raise bad_request(e)
     delivered = await notifier.send_defect_card(db, facility, defect) if defect else []
     return {
-        "answer": {"status": answer.status, "photo_url": answer.photo_url, "source": answer.source},
+        "answer": {"status": answer.status, "photos": answer.photos, "source": answer.source},
         "defect": audit.defect_to_dict(defect, facility) if defect else None,
         "delivered": delivered,
         "summary": audit.summary(db, facility),
@@ -274,7 +274,7 @@ def resolve_defect(
 ):
     defect = _defect(db, facility, defect_id)
     try:
-        audit.resolve_by_owner(db, defect, uploaded_photo(payload.photo_url))
+        audit.resolve_by_owner(db, defect, uploaded_photos(payload.photos))
     except ValueError as e:
         raise bad_request(e)
     return {"defect": audit.defect_to_dict(defect, facility), "summary": audit.summary(db, facility)}
