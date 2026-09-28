@@ -58,6 +58,12 @@ def close_shift(db: Session, employee: Employee, shift: Shift) -> dict:
     return stats
 
 
+# Photos already attached to a duty during this shift
+def task_photos(db: Session, shift: Shift, item_id: int) -> list[str]:
+    task = db.query(ShiftTask).filter(ShiftTask.shift_id == shift.id, ShiftTask.item_id == item_id).first()
+    return task.photos if task else []
+
+
 def set_task_done(db: Session, shift: Shift, item_id: int, done: bool, photos: list[str]) -> None:
     task = db.query(ShiftTask).filter(ShiftTask.shift_id == shift.id, ShiftTask.item_id == item_id).first()
     if done:

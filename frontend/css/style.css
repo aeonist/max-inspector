@@ -292,6 +292,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 .switch:checked { background: var(--green); }
 .switch:checked::after { transform: translateX(20px); }
+.switch:disabled { opacity: 0.6; }
+.rules { display: grid; gap: 18px; }
+.rules .switch-row + .switch-row { padding-top: 18px; border-top: 1px solid var(--line); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .chip {

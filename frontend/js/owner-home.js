@@ -356,16 +356,60 @@ Screens.settings = {
   },
 };
 
+// Owner's work rules: each switch is saved as soon as it is flipped
+const RULES = [
+  {
+    key: "qr_checkin",
+    title: "Начало смены по QR на рабочем месте",
+    note: "Сотрудник открывает смену, сканируя QR на кухне в MAX, — из дома не отметиться. В веб-версии MAX сканера может не быть.",
+  },
+  {
+    key: "compliant_photo_required",
+    title: "«Соблюдается» в аудите — только с фото",
+    note: "Каждый ответ «Соблюдается» подтверждается снимком. Если выключено, фото по желанию.",
+  },
+  {
+    key: "task_photo_required",
+    title: "Задачи смены — только с фото",
+    note: "Сотрудник не отметит задачу выполненной без снимка: галочка сразу открывает камеру.",
+  },
+  {
+    key: "reference_from_fixes",
+    title: "Принятое фото исправления становится эталоном",
+    note: "Когда вы принимаете исправление сотрудника, его фото «стало» показывается команде как «как должно быть». Ваши собственные фото становятся эталоном всегда.",
+  },
+];
+
+function ruleValue(state, key) {
+  return key === "qr_checkin" ? Boolean(state.qr_checkin) : Boolean(state.settings && state.settings[key]);
+}
+
 function settingsView(state) {
   return html`<section class="card">
       <h2>${state.name}</h2>
       <p class="muted">${state.address || "Адрес не указан"}</p>
-      <p class="small">Начало смены: ${state.qr_checkin ? "по QR на рабочем месте" : "кнопкой, без QR"}</p>
       <div class="stack">
         <button type="button" class="btn btn-secondary" data-act="editSetup">Изменить название, должности и обязанности</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Правила работы</h2>
+      <div class="card rules">
+        ${RULES.map(
+          (rule) => html`<label class="switch-row">
+            <span>
+              <strong>${rule.title}</strong>
+              <span class="muted small">${rule.note}</span>
+            </span>
+            <input type="checkbox" class="switch" data-setting="${rule.key}" ${raw(ruleValue(state, rule.key) ? "checked" : "")}>
+          </label>`
+        )}
         ${state.qr_checkin
-          ? html`<button type="button" class="btn btn-secondary" data-act="downloadCheckin">🖨 QR «Начало смены» (PDF)</button>
-              <button type="button" class="btn btn-secondary" data-act="reissueCheckin">Перевыпустить QR</button>`
+          ? html`<div class="stack">
+              <button type="button" class="btn btn-secondary" data-act="downloadCheckin">🖨 QR «Начало смены» (PDF)</button>
+              <button type="button" class="btn btn-secondary" data-act="reissueCheckin">Перевыпустить QR</button>
+            </div>`
           : ""}
       </div>
     </section>
@@ -393,6 +437,27 @@ function settingsView(state) {
       </div>
     </section>`;
 }
+
+// A switch flipped in "Правила работы": save it, roll it back on error
+document.addEventListener("change", async (e) => {
+  const input = e.target.closest("[data-setting]");
+  if (!input) return;
+  const key = input.dataset.setting;
+  const value = input.checked;
+  input.disabled = true;
+  try {
+    App.ownerState = await api("PATCH", "/api/owner/settings", { [key]: value });
+    Bridge.haptic("light");
+    toast("Сохранено ✓", { type: "success" });
+    // QR print and reissue buttons appear or disappear with the QR rule
+    if (key === "qr_checkin" && Router.current && Router.current.name === "settings") await Router.refresh();
+  } catch (err) {
+    input.checked = !value;
+    toastError(err);
+  } finally {
+    input.disabled = false;
+  }
+});
 
 Actions.deleteFacility = async (el) => {
   const ok = await confirmSheet(

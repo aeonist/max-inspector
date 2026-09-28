@@ -30,6 +30,17 @@ def _dump(value) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+# Owner's work rules and their defaults (the defaults are the behaviour before settings existed)
+FACILITY_SETTINGS = {
+    # "Соблюдается" in the audit needs a photo
+    "compliant_photo_required": False,
+    # A shift duty can be marked done only with a photo
+    "task_photo_required": False,
+    # An accepted "after" photo from staff becomes the facility's "as it should be" reference
+    "reference_from_fixes": True,
+}
+
+
 # Several photos in a JSON column; the legacy single-photo column keeps the first one
 def _photos(photos_json, first_url) -> list[str]:
     return _load(photos_json, []) or ([first_url] if first_url else [])
@@ -59,6 +70,8 @@ class Facility(Base):
     custom_duties_json = Column(Text, default="[]")
     # Facility's own "as it should be" photos: {"<item_id>": "/uploads/..."}
     reference_photos_json = Column(Text, default="{}")
+    # Owner's work rules, see FACILITY_SETTINGS
+    settings_json = Column(Text, default="{}")
     created_at = Column(DateTime, default=utcnow)
 
     # Legacy columns of the first version, kept so old databases keep working
@@ -117,6 +130,16 @@ class Facility(Base):
     @reference_photos.setter
     def reference_photos(self, value: dict):
         self.reference_photos_json = _dump(value)
+
+    # Work rules with defaults filled in; unknown keys are ignored
+    @property
+    def settings(self) -> dict:
+        stored = _load(self.settings_json, {})
+        return {key: bool(stored.get(key, default)) for key, default in FACILITY_SETTINGS.items()}
+
+    @settings.setter
+    def settings(self, value: dict):
+        self.settings_json = _dump({k: bool(v) for k, v in value.items() if k in FACILITY_SETTINGS})
 
 
 
