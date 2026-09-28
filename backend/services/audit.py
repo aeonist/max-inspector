@@ -143,7 +143,7 @@ def set_answer(
         raise ValueError("Пункт проверочного листа не найден")
     if status not in ANSWER_STATUSES:
         raise ValueError("Неизвестный ответ")
-    # A violation needs a photo for the person who fixes it; for "compliant" a photo is optional
+    # A violation needs a photo for the person who fixes it; "compliant" only if the owner requires it
     if status == "violation" and not photos:
         raise ValueError("Сфотографируйте нарушение")
 
@@ -155,6 +155,8 @@ def set_answer(
     # Confirming "compliant" again without photos keeps the photos already attached
     if status == "compliant" and not photos and previous and previous.status == "compliant":
         photos = previous.photos
+    if status == "compliant" and not photos and facility.settings["compliant_photo_required"]:
+        raise ValueError("Сфотографируйте, что требование соблюдается: так настроено в правилах работы")
     answer = _upsert_answer(db, session, item_id, status, "user", photos)
     defect = _unresolved_for_item(db, facility, item_id)
     created = False
@@ -220,8 +222,9 @@ def mark_fixed(db: Session, defect: Defect, employee: Employee, photos: list[str
     db.commit()
 
 
-# Owner accepts the fix: the checklist item becomes compliant and the index grows
-def accept_defect(db: Session, defect: Defect) -> None:
+# Owner accepts the fix: the checklist item becomes compliant and the index grows.
+# The "after" photo becomes the reference when the owner took it or the rules allow staff photos
+def accept_defect(db: Session, defect: Defect, by_owner: bool = False) -> None:
     if defect.status == "accepted":
         return
     if defect.status not in UNRESOLVED:
@@ -232,7 +235,8 @@ def accept_defect(db: Session, defect: Defect) -> None:
         facility = db.get(Facility, defect.facility_id)
         session = current_session(db, facility)
         _upsert_answer(db, session, defect.item_id, "compliant", "fix", defect.after_photos)
-        if defect.after_photos:
+        owner_photo = by_owner or bool(defect.fixed_by and defect.fixed_by.is_owner)
+        if defect.after_photos and (owner_photo or facility.settings["reference_from_fixes"]):
             _set_reference(facility, defect.item_id, defect.after_photos[0])
     db.commit()
 
@@ -252,7 +256,7 @@ def resolve_by_owner(db: Session, defect: Defect, photos: list[str]) -> None:
     if photos:
         defect.after_photos = photos
         defect.fixed_at = utcnow()
-    accept_defect(db, defect)
+    accept_defect(db, defect, by_owner=True)
 
 
 # Readiness numbers; progress (answered) and index (compliant) are different things

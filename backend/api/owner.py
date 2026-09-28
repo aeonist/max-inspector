@@ -9,6 +9,7 @@ from schemas import (
     DefectResolveRequest,
     DefectReturnRequest,
     NewStaff,
+    SettingsRequest,
     SetupRequest,
     ShiftRoleRequest,
     StaffUpdateRequest,
@@ -27,6 +28,7 @@ from services.facility import (
     save_setup,
     set_owner_works_shift,
     staff_to_dict,
+    update_settings,
 )
 from services.report import qr_svg
 from services.shifts import active_shift
@@ -90,6 +92,13 @@ async def put_setup(
         save_setup(db, facility, payload.model_dump(), user.full_name)
     except ValueError as e:
         raise bad_request(e)
+    return _state(db, facility)
+
+
+# Work rules: QR check-in, required photos, references from fixes
+@router.patch("/settings")
+def patch_settings(payload: SettingsRequest, facility: Facility = Depends(get_owner_facility), db: Session = Depends(get_db)):
+    update_settings(db, facility, payload.model_dump())
     return _state(db, facility)
 
 

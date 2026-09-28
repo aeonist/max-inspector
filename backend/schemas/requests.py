@@ -31,6 +31,14 @@ class ShiftRoleRequest(BaseModel):
     name: str | None = Field(default=None, max_length=120)
 
 
+# Work rules from the settings screen; only the fields sent are changed
+class SettingsRequest(BaseModel):
+    qr_checkin: bool | None = None
+    compliant_photo_required: bool | None = None
+    task_photo_required: bool | None = None
+    reference_from_fixes: bool | None = None
+
+
 class StaffUpdateRequest(BaseModel):
     full_name: str | None = Field(default=None, max_length=120)
     position: str | None = Field(default=None, max_length=60)

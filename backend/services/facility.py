@@ -177,13 +177,28 @@ def active_staff(db: Session, facility: Facility) -> list[Employee]:
     )
 
 
+# QR check-in on or off; the printable QR gets a token the first time
+def set_qr_checkin(facility: Facility, enabled: bool) -> None:
+    facility.qr_checkin = enabled
+    if enabled and not facility.checkin_token:
+        facility.checkin_token = generate_checkin_token()
+
+
+# Work rules from the settings screen; None leaves a rule as it is
+def update_settings(db: Session, facility: Facility, changes: dict) -> None:
+    if changes.get("qr_checkin") is not None:
+        set_qr_checkin(facility, changes["qr_checkin"])
+    settings = facility.settings
+    settings.update({k: v for k, v in changes.items() if k in settings and v is not None})
+    facility.settings = settings
+    db.commit()
+
+
 # Save the setup wizard; positions, duties and staff arrive together
 def save_setup(db: Session, facility: Facility, data: dict, owner_name: str) -> None:
     facility.name = _clean(data.get("name")) or facility.name
     facility.address = _clean(data.get("address"), 300) or None
-    facility.qr_checkin = bool(data.get("qr_checkin"))
-    if facility.qr_checkin and not facility.checkin_token:
-        facility.checkin_token = generate_checkin_token()
+    set_qr_checkin(facility, bool(data.get("qr_checkin")))
 
     positions = []
     for p in data.get("positions") or []:
@@ -260,6 +275,7 @@ def facility_state(db: Session, facility: Facility) -> dict:
         "address": facility.address or "",
         "setup_done": bool(facility.setup_done),
         "qr_checkin": bool(facility.qr_checkin),
+        "settings": facility.settings,
         "positions": facility.positions,
         "features": facility.features,
         "assignments": facility.assignments,

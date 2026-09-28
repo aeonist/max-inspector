@@ -26,6 +26,7 @@ MIGRATIONS = {
         "geo_pending": "BOOLEAN DEFAULT 0",
         "qr_checkin": "BOOLEAN DEFAULT 0",
         "checkin_token": "VARCHAR(32)",
+        "settings_json": "TEXT DEFAULT '{}'",
     },
     "employees": {
         "is_owner": "BOOLEAN DEFAULT 0",

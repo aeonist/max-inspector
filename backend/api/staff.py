@@ -26,6 +26,7 @@ from services.shifts import (
     open_shift,
     set_task_done,
     shift_stats,
+    task_photos,
 )
 from utils.timefmt import format_local_time
 
@@ -72,7 +73,11 @@ def _shift_payload(db: Session, emp: Employee) -> dict:
     defects = [audit.defect_to_dict(d, facility) for d in audit.defects_for_employee(db, emp)]
     return {
         "employee": {"full_name": emp.full_name, "position": emp.position, "is_owner": bool(emp.is_owner)},
-        "facility": {"name": facility.name, "qr_checkin": bool(facility.qr_checkin)},
+        "facility": {
+            "name": facility.name,
+            "qr_checkin": bool(facility.qr_checkin),
+            "task_photo_required": facility.settings["task_photo_required"],
+        },
         "shift": (
             {
                 "started": format_local_time(shift.started_at),
@@ -109,7 +114,11 @@ def post_task(item_id: int, payload: TaskRequest, emp: Employee = Depends(get_em
         raise HTTPException(status_code=409, detail="Смена не начата. Начните её в чате с ботом")
     if item_id not in {d["id"] for d in duties_for_employee(emp)}:
         raise HTTPException(status_code=404, detail="Это не ваша задача")
-    set_task_done(db, shift, item_id, payload.done, uploaded_photos(payload.photos))
+    photos = uploaded_photos(payload.photos)
+    photo_required = emp.facility.settings["task_photo_required"]
+    if payload.done and photo_required and not photos and not task_photos(db, shift, item_id):
+        raise HTTPException(status_code=400, detail="Приложите фото выполнения: так настроено в заведении")
+    set_task_done(db, shift, item_id, payload.done, photos)
     return {"stats": shift_stats(db, emp, shift)}
 
 

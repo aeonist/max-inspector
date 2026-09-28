@@ -142,7 +142,9 @@ function renderAuditItem(id) {
           <button type="button" class="answer bad ${status === "violation" ? "active" : ""}" data-act="answerViolation" data-id="${id}">✕<span>Нарушение</span></button>
           <button type="button" class="answer na ${status === "na" ? "active" : ""}" data-act="answerNa" data-id="${id}">—<span>Не применимо</span></button>
         </div>
-        <p class="answer-hint muted small">Нарушение подтверждается фото. Для «Соблюдается» фото по желанию — оно станет эталоном для сотрудников.</p>
+        <p class="answer-hint muted small">${compliantPhotoRequired()
+          ? "Оба ответа подтверждаются фото — так настроено в правилах работы. Фото «Соблюдается» станет эталоном для сотрудников."
+          : "Нарушение подтверждается фото. Для «Соблюдается» фото по желанию — оно станет эталоном для сотрудников."}</p>
         <div class="row-between audit-nav">
           ${Audit.prev(id) ? html`<button type="button" class="btn-link" data-act="auditGo" data-id="${Audit.prev(id)}">‹ Предыдущий</button>` : html`<span></span>`}
           ${Audit.next(id) ? html`<button type="button" class="btn-link" data-act="auditGo" data-id="${Audit.next(id)}">Пропустить ›</button>` : html`<button type="button" class="btn-link" data-act="auditDone">К итогам ›</button>`}
@@ -213,9 +215,28 @@ Actions.auditSections = async () => {
   window.scrollTo(0, 0);
 };
 
-// Compliant: one tap and on to the next question; a photo can be added from the toast or later
+function compliantPhotoRequired() {
+  const settings = App.ownerState && App.ownerState.settings;
+  return Boolean(settings && settings.compliant_photo_required);
+}
+
+// Compliant: one tap and on to the next question; a photo can be added from the toast or later.
+// With "only with a photo" in the work rules, the camera opens first, like for a violation
 Actions.answerOk = async (el) => {
   const id = Number(el.dataset.id);
+  const previous = Audit.answers[String(id)];
+  const hasPhotos = previous && previous.status === "compliant" && (previous.photos || []).length;
+  if (compliantPhotoRequired() && !hasPhotos) {
+    const photos = await collectPhotos({
+      title: "Соблюдается",
+      note: "Покажите, как это выглядит сейчас. Первое фото станет эталоном «как должно быть» для сотрудников.",
+      confirm: "Сохранить",
+    });
+    if (!photos) return;
+    const saved = await saveAnswer(id, { status: "compliant", photos }, el);
+    if (saved) toast(`Соблюдается ✓ Фото: ${photos.length}`, { type: "success" });
+    return;
+  }
   const res = await saveAnswer(id, { status: "compliant" }, el);
   if (!res) return;
   if ((res.answer.photos || []).length) {

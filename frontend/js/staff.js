@@ -305,6 +305,12 @@ Actions.fixDefect = async (el) => {
 
 Actions.toggleTask = (el) => {
   const done = !el.dataset.done;
+  const duty = Staff.shift.duties.find((d) => d.id === Number(el.dataset.id));
+  // "Only with a photo" in the work rules: the check mark opens the camera
+  if (done && Staff.shift.facility.task_photo_required && duty && !duty.photos.length) {
+    attachTaskPhoto(duty.id);
+    return;
+  }
   // Optimistic update; rolled back by the refresh on error
   el.closest(".task").classList.toggle("done", done);
   el.textContent = done ? "✓" : "";
@@ -312,7 +318,6 @@ Actions.toggleTask = (el) => {
   if (done) Bridge.haptic("light");
   api("POST", `/api/shift/tasks/${el.dataset.id}`, { done })
     .then(() => {
-      const duty = Staff.shift.duties.find((d) => d.id === Number(el.dataset.id));
       if (duty) duty.done = done;
       updateTaskCounters();
     })
@@ -352,9 +357,10 @@ Actions.taskMenu = (el) => {
   );
 };
 
-// Optional photo proof of a duty; marks it done
-Actions.taskPhoto = async (el) => {
-  const id = Number(el.dataset.id);
+// Photo proof of a duty (optional unless the work rules require it); marks it done
+Actions.taskPhoto = (el) => attachTaskPhoto(Number(el.dataset.id));
+
+async function attachTaskPhoto(id) {
   const photos = await collectPhotos({ title: "Фото выполнения", confirm: "Прикрепить" });
   if (!photos) return;
   document.dispatchEvent(new Event("sheet:close"));
@@ -365,7 +371,7 @@ Actions.taskPhoto = async (el) => {
   } catch (e) {
     toastError(e);
   }
-};
+}
 
 Actions.endShift = (el) =>
   busy(el, async () => {
