@@ -92,7 +92,8 @@ function renderAuditItem(id) {
   else if (answer && answer.source === "fix") answerNote = "Нарушение исправлено и принято";
   else if (defect) answerNote = defect.to_owner ? "Нарушение — в ваших задачах" : `Нарушение отправлено: ${defect.assigned_position}`;
   const answerPhotos = answer && answer.status !== "na" ? answer.photos || [] : [];
-  if (!answerNote && status === "compliant") answerNote = `Соблюдается · ${answerPhotos.length} фото`;
+  if (!answerNote && status === "compliant") answerNote = answerPhotos.length ? `Соблюдается · ${answerPhotos.length} фото` : "Соблюдается";
+  const addPhotoLink = status === "compliant" && answer.source === "user" && !answerPhotos.length;
 
   mount(
     "#app",
@@ -130,6 +131,8 @@ function renderAuditItem(id) {
           ${answerNote
             ? html`<p class="answer-note ${status}">${answerNote}${answerPhotos.length
                 ? html` · <button type="button" class="inline-link" data-act="photo" data-srcs="${JSON.stringify(answerPhotos)}" data-caption="${STATUS_LABELS[status] || "Фото"}">посмотреть фото</button>`
+                : ""}${addPhotoLink
+                ? html` · <button type="button" class="inline-link" data-act="addCompliantPhotos" data-id="${id}">добавить фото</button>`
                 : ""}</p>`
             : ""}
         </article>
@@ -139,7 +142,7 @@ function renderAuditItem(id) {
           <button type="button" class="answer bad ${status === "violation" ? "active" : ""}" data-act="answerViolation" data-id="${id}">✕<span>Нарушение</span></button>
           <button type="button" class="answer na ${status === "na" ? "active" : ""}" data-act="answerNa" data-id="${id}">—<span>Не применимо</span></button>
         </div>
-        <p class="answer-hint muted small">Ответ подтверждается фото — можно несколько, как их увидит инспектор.</p>
+        <p class="answer-hint muted small">Нарушение подтверждается фото. Для «Соблюдается» фото по желанию — оно станет эталоном для сотрудников.</p>
         <div class="row-between audit-nav">
           ${Audit.prev(id) ? html`<button type="button" class="btn-link" data-act="auditGo" data-id="${Audit.prev(id)}">‹ Предыдущий</button>` : html`<span></span>`}
           ${Audit.next(id) ? html`<button type="button" class="btn-link" data-act="auditGo" data-id="${Audit.next(id)}">Пропустить ›</button>` : html`<button type="button" class="btn-link" data-act="auditDone">К итогам ›</button>`}
@@ -210,18 +213,41 @@ Actions.auditSections = async () => {
   window.scrollTo(0, 0);
 };
 
-// Compliant: photos first, like a violation; the first one becomes the facility's reference
+// Compliant: one tap and on to the next question; a photo can be added from the toast or later
 Actions.answerOk = async (el) => {
   const id = Number(el.dataset.id);
+  const res = await saveAnswer(id, { status: "compliant" }, el);
+  if (!res) return;
+  if ((res.answer.photos || []).length) {
+    toast("Соблюдается ✓", { type: "success" });
+    return;
+  }
+  toast("Соблюдается ✓", { type: "success", action: { label: "Добавить фото", fn: () => addCompliantPhotos(id) } });
+};
+
+// Photos for a "compliant" answer; the first one becomes the facility's "as it should be" reference
+async function addCompliantPhotos(id) {
   const photos = await collectPhotos({
     title: "Соблюдается",
     note: "Покажите, как это выглядит сейчас. Первое фото станет эталоном «как должно быть» для сотрудников.",
     confirm: "Сохранить",
   });
   if (!photos) return;
-  const res = await saveAnswer(id, { status: "compliant", photos }, el);
-  if (res) toast(`Соблюдается ✓ Фото: ${photos.length}`, { type: "success" });
-};
+  let res;
+  try {
+    res = await api("PUT", `/api/owner/audit/${id}`, { status: "compliant", photos });
+  } catch (e) {
+    toastError(e, () => addCompliantPhotos(id));
+    return;
+  }
+  Audit.answers[String(id)] = res.answer;
+  Audit.summary = res.summary;
+  App.ownerState.summary = res.summary;
+  toast(`Фото сохранено: ${photos.length} ✓ Это эталон для сотрудников`, { type: "success" });
+  if (Router.current && Router.current.name === "audit" && Router.current.params.itemId === id) renderAuditItem(id);
+}
+
+Actions.addCompliantPhotos = (el) => addCompliantPhotos(Number(el.dataset.id));
 
 Actions.answerNa = (el) => saveAnswer(Number(el.dataset.id), { status: "na" }, el);
 

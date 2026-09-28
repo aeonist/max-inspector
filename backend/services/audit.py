@@ -143,22 +143,24 @@ def set_answer(
         raise ValueError("Пункт проверочного листа не найден")
     if status not in ANSWER_STATUSES:
         raise ValueError("Неизвестный ответ")
-    # Both answers are backed by photos, the way the inspector will see the place
+    # A violation needs a photo for the person who fixes it; for "compliant" a photo is optional
     if status == "violation" and not photos:
         raise ValueError("Сфотографируйте нарушение")
-    if status == "compliant" and not photos:
-        raise ValueError("Сфотографируйте, что требование соблюдается")
 
     if status == "na":
         photos = []
 
     session = current_session(db, facility)
+    previous = answers_by_item(db, session).get(item_id)
+    # Confirming "compliant" again without photos keeps the photos already attached
+    if status == "compliant" and not photos and previous and previous.status == "compliant":
+        photos = previous.photos
     answer = _upsert_answer(db, session, item_id, status, "user", photos)
     defect = _unresolved_for_item(db, facility, item_id)
     created = False
 
     # A photo confirming compliance becomes this facility's "as it should be" reference
-    if status == "compliant":
+    if status == "compliant" and photos:
         _set_reference(facility, item_id, photos[0])
 
     if status == "violation":

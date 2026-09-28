@@ -82,9 +82,15 @@ def test_staff_management(client, facility):
     assert "Ильдар" not in names
 
 
-def test_compliant_requires_photo_and_keeps_several(client, facility, upload):
+def test_compliant_photo_is_optional_and_keeps_several(client, facility, upload):
     h = headers(OWNER)
-    assert client.put("/api/owner/audit/10", headers=h, json={"status": "compliant"}).status_code == 400
+    # One tap: "compliant" without a photo is saved and sets no reference
+    res = client.put("/api/owner/audit/10", headers=h, json={"status": "compliant"})
+    assert res.status_code == 200
+    assert res.json()["answer"]["photos"] == []
+    assert "10" not in client.get("/api/owner/state", headers=h).json()["reference_photos"]
+    # A violation still needs a photo
+    assert client.put("/api/owner/audit/12", headers=h, json={"status": "violation"}).status_code == 400
 
     photos = [upload(OWNER), upload(OWNER), upload(OWNER)]
     res = client.put("/api/owner/audit/26", headers=h, json={"status": "compliant", "photos": photos})
@@ -92,6 +98,9 @@ def test_compliant_requires_photo_and_keeps_several(client, facility, upload):
     # The first photo becomes the facility's "as it should be" reference
     assert client.get("/api/owner/state", headers=h).json()["reference_photos"]["26"] == photos[0]
     assert client.get("/api/owner/audit", headers=h).json()["answers"]["26"]["photos"] == photos
+    # Confirming "compliant" again without photos keeps the ones attached
+    res = client.put("/api/owner/audit/26", headers=h, json={"status": "compliant"})
+    assert res.json()["answer"]["photos"] == photos
 
     # "Not applicable" never keeps photos
     res = client.put("/api/owner/audit/11", headers=h, json={"status": "na", "photos": [upload(OWNER)]})

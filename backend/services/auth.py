@@ -95,6 +95,9 @@ def _sign(kind: str, subject: int, ttl: int) -> str:
 
 
 def _verify(token: str, kind: str) -> int | None:
+    # Without a bot token the signing key is public: accept nothing
+    if not BOT_TOKEN:
+        return None
     try:
         body, sig = token.split(".", 1)
         if not hmac.compare_digest(_signature(body), sig):
