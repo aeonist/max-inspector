@@ -40,6 +40,10 @@ DEMO_SETUP = {
 DEMO_VIOLATIONS = [26, 14]
 # A fix sent by the cook that waits for the owner's review
 DEMO_FIX = 18
+# The end of the route is left unchecked, so "Продолжить аудит" has something to show
+DEMO_UNCHECKED = [66, 67, 68, 69, 70, 71]
+# With the rest compliant the demo starts just under the readiness threshold (58 of 67, 87%):
+# closing the three violations brings it to 61 of 67 (91%) and "Готово к проверке"
 
 
 # Copy a library photo into uploads so it behaves like a photo taken in the app
@@ -65,13 +69,15 @@ def create_demo_facility(db: Session, owner_user_id: int, owner_name: str) -> Fa
     facility = create_facility(db, owner_user_id)
     save_setup(db, facility, {**DEMO_SETUP, "owner_name": owner_name or "Руководитель"}, owner_name)
 
-    # "Compliant" needs a photo: answered are the items the photo library covers
+    # The rest of the audit is compliant; items the photo library covers get a photo
     answered = audit.answers_by_item(db, audit.current_session(db, facility))
+    skip = {*DEMO_VIOLATIONS, DEMO_FIX, *DEMO_UNCHECKED, *answered}
     for item in load_checklist():
-        special = item["id"] in DEMO_VIOLATIONS or item["id"] == DEMO_FIX
+        if item["id"] in skip:
+            continue
         has_photo = (FRONTEND_DIR / "img" / "reference" / f"{item['id']}_good.jpg").exists()
-        if has_photo and not special and item["id"] not in answered:
-            audit.set_answer(db, facility, item["id"], "compliant", [_library_photo(item["id"], "good")])
+        photos = [_library_photo(item["id"], "good")] if has_photo else []
+        audit.set_answer(db, facility, item["id"], "compliant", photos)
 
     for item_id in DEMO_VIOLATIONS:
         _, defect, _ = audit.set_answer(db, facility, item_id, "violation", [_library_photo(item_id, "bad")])

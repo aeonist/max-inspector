@@ -1,4 +1,8 @@
+import os
+import subprocess
+import sys
 import time
+from pathlib import Path
 
 from conftest import headers, make_init_data
 
@@ -38,3 +42,21 @@ def test_signed_link_token_works(client):
 def test_owner_endpoints_are_scoped_to_the_owner(client, facility):
     # A stranger has no facility and cannot read someone else's
     assert client.get("/api/owner/state", headers=headers(999)).status_code == 404
+
+
+# A checker may run `docker compose up` without a bot token: the app must start and stay safe
+def test_app_starts_without_bot_token(tmp_path):
+    env = {**os.environ, "BOT_TOKEN": "", "BOT_POLLING": "1", "DATA_DIR": str(tmp_path), "UPLOADS_DIR": str(tmp_path / "u")}
+    code = (
+        "from fastapi.testclient import TestClient\n"
+        "import main\n"
+        "from services.auth import make_link_token\n"
+        "with TestClient(main.app) as c:\n"
+        "    assert c.get('/api/health').status_code == 200\n"
+        "    assert c.get('/').status_code == 200\n"
+        "    # without a token the signing key is public, so signed links are refused\n"
+        "    assert c.get('/api/me', headers={'X-Auth-Token': make_link_token(1)}).status_code == 401\n"
+    )
+    backend = Path(__file__).resolve().parent.parent
+    result = subprocess.run([sys.executable, "-c", code], cwd=backend, env=env, capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, result.stderr[-2000:]

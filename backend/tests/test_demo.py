@@ -21,6 +21,31 @@ def test_demo_cafe_has_the_whole_cycle_ready(client, sent):
     assert not [m for m in sent if "Нарушение" in (m["text"] or "")]
 
 
+# The quick path of the README ends with "Готово к проверке"
+def test_demo_reaches_readiness_after_closing_its_violations(client, sent, upload):
+    h = headers(OWNER, "Алия")
+    client.post("/api/facility/demo", headers=h)
+    summary = client.get("/api/owner/state", headers=h).json()["summary"]
+    assert 80 <= summary["index"] < 90 and not summary["ready"]
+    assert summary["answered"] < summary["total"]  # something left for "Продолжить аудит"
+
+    defects = client.get("/api/owner/state", headers=h).json()["defects"]
+    review = next(d for d in defects if d["status"] == "fixed")
+    client.post(f"/api/owner/defects/{review['id']}/accept", headers=h)
+
+    # The owner on shift fixes the cook's violation, then accepts it
+    shift = client.get("/api/shift", headers=h).json()
+    urgent = next(d for d in shift["defects"] if d["status"] == "open")
+    client.post("/api/shift/start", headers=h)
+    assert client.post(f"/api/defects/{urgent['id']}/fix", headers=h, json={"photos": [upload(OWNER)]}).status_code == 200
+    client.post(f"/api/owner/defects/{urgent['id']}/accept", headers=h)
+
+    # The owner's own task (thermometers) is closed with a photo
+    own = next(d for d in client.get("/api/owner/state", headers=h).json()["defects"] if d["status"] == "open")
+    res = client.post(f"/api/owner/defects/{own['id']}/resolve", headers=h, json={"photos": [upload(OWNER)]}).json()
+    assert res["summary"]["index"] >= 90 and res["summary"]["ready"]
+
+
 def test_demo_is_refused_when_facility_exists(client, facility):
     assert client.post("/api/facility/demo", headers=headers(OWNER)).status_code == 409
 

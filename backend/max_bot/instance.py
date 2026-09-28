@@ -6,8 +6,9 @@ from config import BOT_TOKEN, BOT_USERNAME
 
 logger = logging.getLogger(__name__)
 
-# Initialize bot and dispatcher
-bot = Bot(BOT_TOKEN)
+# Initialize bot and dispatcher; maxapi refuses an empty token, and without
+# a token polling is off and nothing is sent (see config.BOT_POLLING, notifier)
+bot = Bot(BOT_TOKEN or "not-configured")
 dp = Dispatcher()
 
 _username = BOT_USERNAME

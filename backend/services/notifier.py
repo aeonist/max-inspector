@@ -3,6 +3,7 @@ import logging
 from maxapi.types.input_media import InputMedia
 from sqlalchemy.orm import Session
 
+from config import BOT_TOKEN
 from max_bot import keyboards
 from max_bot.instance import bot
 from models import Defect, Employee, Facility
@@ -41,6 +42,8 @@ def _photo_groups(first: list[str], first_label: str, second: list[str], second_
 
 
 async def _send(user_id: int, text: str, attachments: list) -> bool:
+    if not BOT_TOKEN:
+        return False
     try:
         await bot.send_message(user_id=user_id, text=text, attachments=attachments)
         return True

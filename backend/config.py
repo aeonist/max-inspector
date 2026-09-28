@@ -23,15 +23,16 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 # Bot and WebApp settings
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-WEBAPP_BASE = os.getenv("WEBAPP_URL", "https://46.29.114.201.sslip.io").rstrip("/")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
+WEBAPP_BASE = os.getenv("WEBAPP_URL", "http://localhost:8000").rstrip("/")
 # Bot username for deep links and OpenAppButton; resolved via get_me() when empty
 BOT_USERNAME = os.getenv("BOT_USERNAME", "")
 # "openapp": buttons open the mini-app bound to the bot (initData auth)
 # "link": buttons open WEBAPP_URL with a signed token (until the mini-app is bound)
 MINIAPP_MODE = os.getenv("MINIAPP_MODE", "link").strip().lower()
-# Start bot polling together with the API (disabled in tests)
-BOT_POLLING = os.getenv("BOT_POLLING", "1") == "1"
+# Start bot polling together with the API (disabled in tests).
+# Without a token the API and the mini-app still start; the bot stays off
+BOT_POLLING = os.getenv("BOT_POLLING", "1") == "1" and bool(BOT_TOKEN)
 
 # Shifts older than this are closed automatically
 SHIFT_MAX_HOURS = 12

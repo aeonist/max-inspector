@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 import max_bot.handlers  # noqa: F401 - register bot handlers
 from api import api_router
-from config import BOT_POLLING, FRONTEND_DIR, UPLOADS_DIR
+from config import BOT_POLLING, BOT_TOKEN, FRONTEND_DIR, UPLOADS_DIR
 from database import init_db
 from max_bot import bot, dp
 from max_bot.instance import resolve_username
@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 
 # Initialize database tables and migrate columns
 init_db()
+
+if not BOT_TOKEN:
+    logger.warning("BOT_TOKEN is not set: the bot is off; API and mini-app run, sign-in works only from MAX")
 
 
 # Application lifespan context
