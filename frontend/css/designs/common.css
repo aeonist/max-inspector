@@ -68,3 +68,40 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* A photo button's icon flows with its words (see DesignCommon.photoLabel), so a wrapped label stays one centred text */
+:root[data-design] .btn-text { display: block; text-wrap: balance; }
+:root[data-design] .btn-text .ico { margin-right: 6px; }
+
+/* Links after a sentence in the answer note: their own tap targets, no dots between them */
+:root[data-design] .answer-note .inline-link { display: inline-block; margin-left: 8px; padding: 2px 0; }
+
+/* Facts of a violation in its sheet: a short label column and the value */
+:root[data-design] .facts { display: grid; gap: 0; margin: 0; }
+:root[data-design] .facts > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+:root[data-design] .facts dt { font-size: 13px; color: var(--muted); padding-top: 1px; }
+:root[data-design] .facts dd { margin: 0; }
+:root[data-design] .facts .facts-alert dd { color: var(--red); }
+
+/* Sections sheet: one row per section, the count kept on the row's right edge */
+:root[data-design] .section-list { display: grid; }
+:root[data-design] .section-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+:root[data-design] .section-row:last-child { border-bottom: 0; }
+:root[data-design] .section-count { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+:root[data-design] .section-row.current .section-name { font-weight: 700; }

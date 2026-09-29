@@ -1,7 +1,7 @@
 /* Design «Журнал»: the paper forms the inspector checks, moved into the phone.
-   Squared notebook paper; the checklist is a form of squares ticked in blue ink, violations are crossed
-   in red, verdicts are rubber stamps and staff sign the shift journal by hand.
-   Applies only with <html data-design="journal">. */
+   Squared paper; the checklist is a form of squares ticked in blue ink, violations are crossed in red,
+   the totals are typeset under the form like the last lines of an act, and the shift journal
+   records the time of each duty. Applies only with <html data-design="journal">. */
 
 @font-face { font-family: "PT Serif"; font-weight: 400; font-display: swap; src: url("../../fonts/pt-serif-cyrillic-400-normal.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
 @font-face { font-family: "PT Serif"; font-weight: 400; font-display: swap; src: url("../../fonts/pt-serif-latin-400-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
@@ -11,8 +11,6 @@
 @font-face { font-family: "PT Sans"; font-weight: 400; font-display: swap; src: url("../../fonts/pt-sans-latin-400-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: "PT Sans"; font-weight: 700; font-display: swap; src: url("../../fonts/pt-sans-cyrillic-700-normal.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
 @font-face { font-family: "PT Sans"; font-weight: 700; font-display: swap; src: url("../../fonts/pt-sans-latin-700-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: "Bad Script"; font-weight: 400; font-display: swap; src: url("../../fonts/bad-script-cyrillic-400-normal.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
-@font-face { font-family: "Bad Script"; font-weight: 400; font-display: swap; src: url("../../fonts/bad-script-latin-400-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 
 :root[data-design="journal"] {
   --paper: #f3f6fa;
@@ -25,8 +23,6 @@
   --ink-press: #152c69;
   --ink-soft: #e2e9f6;
   --redpen: #c0342b;
-  --violet: #5b3ca6;
-  --margin: #e3a19a;
   --cell: 22px;
   --print-edge: #ffffff;
 
@@ -40,8 +36,8 @@
   --accent-soft: var(--ink-soft);
   --green: var(--ink);
   --green-soft: var(--ink-soft);
-  --amber: var(--violet);
-  --amber-soft: #ece6f6;
+  --amber: #8a5a12;
+  --amber-soft: #f4ecdc;
   --red: var(--redpen);
   --red-soft: #fbe8e5;
   --gray-soft: #e8edf5;
@@ -53,7 +49,6 @@
   --toast-ok: #1f3d8f;
   --toast-err: #9f2a21;
   --font-display: "PT Serif", Georgia, serif;
-  --font-hand: "Bad Script", "Segoe Script", cursive;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -68,10 +63,9 @@
     --ink-press: #c3d2ff;
     --ink-soft: #1c2a45;
     --redpen: #ff8e81;
-    --violet: #bba5ff;
-    --margin: #6b3535;
     --print-edge: #d9dfe8;
-    --amber-soft: #2a2340;
+    --amber: #e9b872;
+    --amber-soft: #2e2618;
     --red-soft: #36201e;
     --gray-soft: #1a2437;
     --overlay: rgba(0, 0, 0, 0.6);
@@ -94,40 +88,30 @@ html[data-design="journal"] body {
   background-size: var(--cell) var(--cell);
 }
 [data-design="journal"] body { font-family: "PT Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 16px; line-height: 1.45; color: var(--print); }
-/* The red margin line of a school notebook down the left of the column */
-[data-design="journal"] .app {
-  background: linear-gradient(var(--margin), var(--margin)) no-repeat 9px 0 / 1px 100%;
-  padding-left: 24px;
-}
 
 [data-design="journal"] h1,
 [data-design="journal"] h2,
 [data-design="journal"] h3 { font-family: var(--font-display); letter-spacing: 0; }
-[data-design="journal"] h2 { font-size: 20px; font-weight: 700; }
+[data-design="journal"] h2 { font-size: 20px; font-weight: 700; text-wrap: balance; }
 [data-design="journal"] h3 { font-weight: 400; }
 [data-design="journal"] .muted,
 [data-design="journal"] .j-pencil { color: var(--pencil); }
 [data-design="journal"] .j-pencil { font-size: 13px; line-height: 1.4; }
+[data-design="journal"] .j-red { color: var(--redpen); }
 [data-design="journal"] .j-title { font-size: 24px; line-height: 1.15; margin-bottom: 4px; }
 
-[data-design="journal"] .topbar {
-  margin-left: -24px;
-  padding-left: 24px;
-  background: var(--paper);
-  border-bottom: 1px solid var(--print);
-}
+[data-design="journal"] .topbar { background: var(--paper); border-bottom: 1px solid var(--print); }
 [data-design="journal"] .topbar h1 { font-size: 19px; }
 [data-design="journal"] .topbar-back { border-color: var(--rule); background: var(--sheet); border-radius: 0; }
 [data-design="journal"] .topbar-action { color: var(--ink); font-size: 15px; font-weight: 700; }
 [data-design="journal"] .saved { color: var(--ink); font-size: 13px; font-weight: 700; }
 
-[data-design="journal"] .section { margin: 26px 0 12px; }
+[data-design="journal"] .section { margin: 28px 0 12px; }
 [data-design="journal"] .section > h2 { border-bottom: 1px solid var(--print); padding-bottom: 4px; gap: 10px; align-items: baseline; }
-/* Counts are written in by hand */
-[data-design="journal"] .count { font-family: var(--font-hand); font-size: 21px; font-weight: 400; line-height: 1; color: var(--ink); }
+[data-design="journal"] .count { font-family: var(--font-display); font-size: 20px; font-weight: 400; line-height: 1; color: var(--pencil); font-variant-numeric: tabular-nums; }
 
 [data-design="journal"] .card { background: var(--sheet); border-color: var(--rule); border-radius: 0; }
-[data-design="journal"] .notice { background: var(--sheet); border: 1px dashed var(--violet); border-radius: 0; }
+[data-design="journal"] .notice { background: var(--sheet); border: 1px solid var(--rule); border-left: 3px solid var(--ink); border-radius: 0; }
 
 /* ---------- Buttons ---------- */
 
@@ -142,6 +126,7 @@ html[data-design="journal"] body {
 [data-design="journal"] .inline-link { color: var(--ink); }
 [data-design="journal"] .chip { border-radius: 0; border-color: var(--rule); background: var(--sheet); }
 [data-design="journal"] .chip.selected { background: var(--ink); border-color: var(--ink); color: var(--on-accent); }
+[data-design="journal"] .j-chip-n { font-weight: 400; margin-left: 3px; opacity: 0.75; font-variant-numeric: tabular-nums; }
 [data-design="journal"] .tile { border-radius: 0; background: var(--sheet); }
 
 [data-design="journal"] .role-tabs { border: 0; border-bottom: 1px solid var(--rule); margin: 8px 0 4px; }
@@ -158,32 +143,33 @@ html[data-design="journal"] body {
 /* ---------- The checklist form ---------- */
 
 [data-design="journal"] .j-form { margin: 16px 0 4px; }
-[data-design="journal"] .j-grid { margin: 14px 0 10px; }
-[data-design="journal"] .j-grid-row { display: grid; grid-template-columns: 100px 1fr; align-items: center; }
-[data-design="journal"] .j-grid-bare .j-grid-row { grid-template-columns: 1fr; }
+[data-design="journal"] .j-grid { display: grid; margin: 14px 0 10px; }
+[data-design="journal"] .j-grid-row { display: grid; grid-template-columns: 94px minmax(0, 1fr); align-items: center; }
+[data-design="journal"] .j-grid-bare .j-grid-row { grid-template-columns: minmax(0, 1fr); }
 [data-design="journal"] .j-grid-label {
   font-size: 13px;
-  line-height: var(--cell);
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   padding-right: 8px;
 }
-[data-design="journal"] .j-cells { display: flex; flex-wrap: wrap; }
+/* Ten squares at most per section; on a narrow phone they shrink together instead of wrapping */
+[data-design="journal"] .j-cells { display: grid; grid-template-columns: repeat(10, minmax(0, var(--cell))); }
 [data-design="journal"] .j-cell {
   position: relative;
-  display: inline-block;
-  flex-shrink: 0;
+  display: block;
+  box-sizing: border-box;
   width: var(--cell);
   height: var(--cell);
-  margin: 0 -1px -1px 0;
   padding: 0;
   border: 1px solid var(--ink);
   border-radius: 0;
   background: var(--sheet);
   cursor: pointer;
 }
-[data-design="journal"] .j-grid-bare .j-cell { --cell: 34px; }
+[data-design="journal"] .j-cells .j-cell { width: auto; height: auto; aspect-ratio: 1 / 1; margin: 0 -1px -1px 0; }
+[data-design="journal"] .j-grid-bare { --cell: 34px; }
 [data-design="journal"] .j-cell::after {
   content: "";
   position: absolute;
@@ -200,7 +186,7 @@ html[data-design="journal"] body {
   background: var(--redpen);
   --mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M5.5 5.2c4.2 4 8.6 8.6 13 13.5M18.6 5.4c-4.6 4-8.9 8.5-13 13.3'/%3E%3C/svg%3E");
 }
-/* A fix waits for the owner: the cross is circled in blue */
+/* A fix waits for the owner: the cross is circled in blue, the way a checked item is circled on paper */
 [data-design="journal"] .j-cell[data-s="review"]::before {
   content: "";
   position: absolute;
@@ -218,62 +204,37 @@ html[data-design="journal"] body {
 [data-design="journal"] .j-cell.current { outline: 3px solid var(--ink); outline-offset: 1px; z-index: 2; }
 [data-design="journal"] button.j-cell:active { background: var(--ink-soft); }
 
-[data-design="journal"] .j-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--pencil); }
-[data-design="journal"] .j-legend li { display: flex; align-items: center; gap: 6px; }
-[data-design="journal"] .j-legend .j-cell { --cell: 16px; margin: 0; cursor: default; }
+[data-design="journal"] .j-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--pencil); }
+[data-design="journal"] .j-legend li { display: flex; align-items: center; gap: 7px; }
+[data-design="journal"] .j-legend .j-cell { --cell: 16px; cursor: default; }
+[data-design="journal"] .j-legend .j-cell[data-s="review"] { margin: 0 3px; }
 
-/* ---------- Verdict: blanks filled in by hand, and a stamp ---------- */
+/* ---------- Totals under the form ---------- */
 
-[data-design="journal"] .j-result { margin: 22px 0 8px; padding-top: 12px; border-top: 1px solid var(--print); }
-[data-design="journal"] .j-result .btn { margin-top: 14px; }
-[data-design="journal"] .j-verdict { display: grid; grid-template-columns: 1fr 1fr auto; gap: 14px; align-items: end; padding: 4px 0 12px; }
-[data-design="journal"] .j-blank { display: grid; gap: 2px; margin: 0; font-size: 13px; line-height: 1.25; color: var(--pencil); }
-[data-design="journal"] .j-hand {
-  font-family: var(--font-hand);
-  font-size: 34px;
-  line-height: 1.15;
-  color: var(--ink);
-  padding: 0 4px;
-  white-space: nowrap;
-  border-bottom: 1px solid var(--print);
-}
-[data-design="journal"] .j-stamp {
-  display: inline-block;
-  padding: 6px 12px 5px;
-  border: 2.5px solid currentColor;
-  border-radius: 5px;
-  box-shadow: inset 0 0 0 2px var(--sheet), inset 0 0 0 3.5px currentColor;
-  font-family: "PT Sans", sans-serif;
-  font-size: 15px;
+[data-design="journal"] .j-result { margin: 22px 0 8px; padding-top: 10px; border-top: 1px solid var(--print); }
+[data-design="journal"] .j-result .btn { margin-top: 16px; }
+[data-design="journal"] .j-totals { display: grid; gap: 4px; margin: 0 0 8px; }
+[data-design="journal"] .j-totals > div { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+/* Dot leaders from the label to the value, as on a printed form */
+[data-design="journal"] .j-totals dt { display: flex; flex: 1; align-items: baseline; min-width: 0; font-size: 15px; }
+[data-design="journal"] .j-totals dt::after { content: ""; flex: 1; min-width: 12px; margin: 0 2px 0 8px; border-bottom: 1.5px dotted var(--pencil); transform: translateY(-4px); }
+[data-design="journal"] .j-totals dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.2;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--violet);
-  background: color-mix(in srgb, var(--sheet) 55%, transparent);
-  transform: rotate(-7deg);
-  opacity: 0.92;
+  color: var(--print);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-[data-design="journal"] .j-verdict .j-stamp { align-self: center; max-width: 116px; margin-right: 4px; font-size: 13px; letter-spacing: 0.06em; text-align: center; }
-[data-design="journal"] .j-stamp-red { color: var(--redpen); }
-[data-design="journal"] .j-stamp-pencil { color: var(--pencil); }
-[data-design="journal"] .j-stamp-small { font-size: 12px; padding: 4px 9px 3px; transform: rotate(-3deg); margin: 10px 0 2px; }
-[data-design="journal"] .j-stamp-press {
-  position: absolute;
-  right: 14px;
-  top: 40%;
-  z-index: 3;
-  font-size: 26px;
-  padding: 8px 18px 7px;
-  pointer-events: none;
-  animation: j-press 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
-}
-@keyframes j-press {
-  from { transform: rotate(-14deg) scale(1.9); opacity: 0; }
-  to { transform: rotate(-8deg) scale(1); opacity: 0.92; }
-}
+[data-design="journal"] .j-conclusion dd { font-size: 17px; white-space: normal; text-align: right; }
+[data-design="journal"] .j-conclusion.ok dd { color: var(--ink); }
+[data-design="journal"] .j-conclusion.bad dd { color: var(--redpen); }
+/* The audit results card is centred in the usual look; the totals read as a form, from the left */
+[data-design="journal"] .card.center:has(.j-verdict) { text-align: left; }
 
-/* ---------- Sheets: acts, orders, entries ---------- */
+/* ---------- Sheets: acts and entries ---------- */
 
 [data-design="journal"] .j-sheet {
   position: relative;
@@ -282,11 +243,11 @@ html[data-design="journal"] body {
   padding: 12px 14px 14px;
   margin: 0 0 14px;
 }
-[data-design="journal"] .j-sheet-head,
-[data-design="journal"] .j-order-sheet .j-sheet-head {
+[data-design="journal"] .j-sheet-head {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  gap: 2px 12px;
   font-size: 13px;
   color: var(--pencil);
   padding-bottom: 6px;
@@ -297,7 +258,7 @@ html[data-design="journal"] body {
 [data-design="journal"] .j-order-sheet h3 { font-size: 18px; line-height: 1.35; margin: 0 0 4px; }
 [data-design="journal"] .j-line {
   display: grid;
-  grid-template-columns: 104px 1fr;
+  grid-template-columns: 104px minmax(0, 1fr);
   gap: 10px;
   font-size: 15px;
   padding: 7px 0;
@@ -313,7 +274,23 @@ html[data-design="journal"] body {
 [data-design="journal"] .j-orders .count { color: var(--redpen); }
 [data-design="journal"] .defect-card.highlight { outline: 2px solid var(--ink); outline-offset: 3px; }
 
-/* Photos are prints pasted onto the sheet, captions written under them */
+/* The acceptance line that replaces the buttons of an accepted act */
+[data-design="journal"] .j-accepted { color: var(--ink); font-weight: 700; border-bottom: 0; margin-top: 8px; animation: j-accepted 0.35s ease-out both; }
+[data-design="journal"] .j-accepted > span:first-child { display: flex; align-items: center; gap: 6px; color: var(--ink); font-size: 15px; padding-top: 0; }
+[data-design="journal"] .j-accepted > span:first-child::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  background: var(--ink);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.2 12.6c1.9 1.3 3.4 3 4.6 5.3 2.3-5.2 6-9.6 10.9-13'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.2 12.6c1.9 1.3 3.4 3 4.6 5.3 2.3-5.2 6-9.6 10.9-13'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+@keyframes j-accepted {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Photos are prints pasted onto the sheet, captions under them */
 [data-design="journal"] .photo-pair { gap: 12px; margin: 12px 0 6px; }
 [data-design="journal"] .photo-thumb,
 [data-design="journal"] .example {
@@ -353,7 +330,7 @@ html[data-design="journal"] body {
 [data-design="journal"] .j-table { border-top: 1px solid var(--rule); }
 [data-design="journal"] .j-tr {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   width: 100%;
   min-height: 48px;
@@ -368,21 +345,48 @@ html[data-design="journal"] body {
   cursor: pointer;
 }
 [data-design="journal"] .j-td-main { font-family: var(--font-display); font-size: 16px; line-height: 1.35; }
-[data-design="journal"] .j-td-side { display: grid; justify-items: end; align-content: start; font-weight: 700; font-size: 14px; color: var(--ink); text-align: right; max-width: 42%; }
+[data-design="journal"] .j-td-side { display: grid; justify-items: end; align-content: start; font-weight: 700; font-size: 14px; color: var(--ink); text-align: right; max-width: 9.5em; }
 [data-design="journal"] .j-td-side small { font-weight: 400; font-size: 12px; color: var(--pencil); }
+[data-design="journal"] .j-td-side small.j-red { color: var(--redpen); }
 [data-design="journal"] .j-tr-link .j-td-main { font-family: inherit; font-weight: 700; color: var(--ink); }
 
 /* The team on shift, as a roll-call */
-[data-design="journal"] #sec-shift .list.card { background: none; border: 0; border-top: 1px solid var(--rule); padding: 0; }
-[data-design="journal"] .person { border-bottom-color: var(--rule); }
-[data-design="journal"] .badge { font-size: 12px; color: var(--pencil); }
+[data-design="journal"] #sec-shift .list.card { background: none; border: 0; padding: 0; }
+[data-design="journal"] .person { border-bottom-color: var(--rule); align-items: flex-start; }
+[data-design="journal"] .person-right { gap: 2px; padding-top: 2px; }
+[data-design="journal"] .badge { font-size: 13px; color: var(--pencil); }
 [data-design="journal"] .badge-ok { color: var(--ink); font-weight: 700; }
+
+/* Violation sheet: the same ruled lines as the acts */
+[data-design="journal"] .j-order-sheet { display: grid; gap: 2px; }
+
+/* Sections sheet: the rows of the form, each opens its section */
+[data-design="journal"] .j-grid-pick { --cell: 16px; margin: 4px 0 0; border-top: 1px solid var(--rule); }
+[data-design="journal"] .j-grid-pick .j-grid-row {
+  grid-template-columns: 94px minmax(0, 1fr) auto;
+  gap: 0 10px;
+  width: 100%;
+  min-height: 46px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  color: var(--print);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+[data-design="journal"] .j-grid-pick .j-grid-label { font-size: 14px; padding-right: 0; }
+[data-design="journal"] .j-grid-pick .j-cell { cursor: inherit; }
+[data-design="journal"] .j-grid-count { font-size: 13px; color: var(--pencil); font-variant-numeric: tabular-nums; white-space: nowrap; }
+[data-design="journal"] .j-grid-pick .current .j-grid-label { font-weight: 700; color: var(--ink); }
+[data-design="journal"] .j-grid-pick .j-grid-row:active { background: var(--ink-soft); }
 
 /* ---------- Audit: a row of the official form ---------- */
 
 [data-design="journal"] .j-audit-head { margin: 14px 0 12px; }
 [data-design="journal"] .j-audit-head .j-title { font-size: 19px; }
-[data-design="journal"] .j-audit-head .j-grid { margin: 10px 0 6px; }
+[data-design="journal"] .j-audit-head .j-grid { margin: 10px 0 8px; }
 [data-design="journal"] .j-question { padding-top: 10px; }
 [data-design="journal"] .j-question .question {
   font-family: var(--font-display);
@@ -390,11 +394,13 @@ html[data-design="journal"] body {
   font-size: 21px;
   line-height: 1.32;
   margin: 4px 0 10px;
+  text-transform: none;
 }
 [data-design="journal"] .j-norm { font-size: 15px; }
 [data-design="journal"] .example-photos { gap: 12px; }
 [data-design="journal"] .answer-note { background: var(--ink-soft); border-left: 3px solid var(--ink); color: var(--ink); font-weight: 700; }
 [data-design="journal"] .answer-note.violation { background: var(--red-soft); border-left-color: var(--redpen); color: var(--redpen); }
+[data-design="journal"] .answer-note.na { background: var(--gray-soft); border-left-color: var(--pencil); color: var(--print); }
 
 [data-design="journal"] .j-answers {
   grid-template-columns: 1fr 1fr 1.3fr;
@@ -407,7 +413,7 @@ html[data-design="journal"] body {
   grid-template-rows: auto 1fr;
   justify-items: stretch;
   gap: 0;
-  min-height: 104px;
+  min-height: 92px;
   margin-left: -1.5px;
   padding: 0;
   border: 1.5px solid var(--print);
@@ -428,12 +434,12 @@ html[data-design="journal"] body {
   text-align: center;
   text-transform: none;
 }
-[data-design="journal"] .j-answer-label small { display: block; font-size: 11px; font-weight: 400; color: var(--pencil); }
-[data-design="journal"] .j-answer-box { position: relative; display: block; min-height: 56px; }
+[data-design="journal"] .j-answer-label small { display: block; font-size: 12px; font-weight: 400; color: var(--pencil); }
+[data-design="journal"] .j-answer-box { position: relative; display: block; min-height: 46px; }
 [data-design="journal"] .j-answer-box::after {
   content: "";
   position: absolute;
-  inset: 8px;
+  inset: 6px;
   opacity: 0;
   -webkit-mask: var(--mark) center / contain no-repeat;
   mask: var(--mark) center / contain no-repeat;
@@ -447,13 +453,14 @@ html[data-design="journal"] body {
 [data-design="journal"] .j-answer.active { background: var(--sheet); border-color: var(--print); }
 [data-design="journal"] .j-answer.active[data-s="compliant"] .j-answer-label { background: var(--ink-soft); }
 [data-design="journal"] .j-answer.active[data-s="violation"] .j-answer-label { background: var(--red-soft); }
+[data-design="journal"] .j-answer.active[data-s="na"] .j-answer-label { background: var(--gray-soft); }
 [data-design="journal"] .answer-hint { text-align: left; margin-top: 4px; }
 
 /* ---------- Shift journal ---------- */
 
 [data-design="journal"] .j-shift-head { margin: 14px 0 6px; }
-[data-design="journal"] .j-date { font-family: var(--font-display); font-size: 17px; }
-[data-design="journal"] .j-who { font-size: 15px; color: var(--pencil); }
+[data-design="journal"] .j-date { font-family: var(--font-display); font-size: 17px; margin-bottom: 6px; }
+[data-design="journal"] .j-shift-head .j-line:last-of-type { border-bottom: 0; }
 [data-design="journal"] .j-shift-head .btn { margin-top: 12px; }
 
 [data-design="journal"] .j-rows {
@@ -465,7 +472,7 @@ html[data-design="journal"] body {
 [data-design="journal"] .j-rows-head,
 [data-design="journal"] .j-row {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 104px;
+  grid-template-columns: 30px minmax(0, 1fr) 66px;
   align-items: stretch;
 }
 [data-design="journal"] .j-rows-head { font-size: 12px; color: var(--pencil); border-bottom: 1px solid var(--print); }
@@ -481,7 +488,7 @@ html[data-design="journal"] body {
 }
 [data-design="journal"] .j-row { gap: 0; min-height: 54px; border-bottom: 1px solid var(--rule); }
 [data-design="journal"] .j-row:last-child { border-bottom: 0; }
-[data-design="journal"] .j-row-n { font-size: 12px; color: var(--pencil); text-align: center; padding-top: 11px; border-right: 1px solid var(--rule); }
+[data-design="journal"] .j-row-n { font-size: 12px; color: var(--pencil); text-align: center; padding-top: 11px; border-right: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
 [data-design="journal"] .j-row-text {
   border: 0;
   background: none;
@@ -493,8 +500,10 @@ html[data-design="journal"] body {
   padding: 8px 8px;
   cursor: pointer;
 }
-[data-design="journal"] .j-row .j-sign,
-[data-design="journal"] .task.done .j-sign {
+[data-design="journal"] .j-row-text .j-pencil { margin-top: 3px; font-size: 12px; }
+/* The mark column: an empty box to tick, or the tick with the time it was made */
+[data-design="journal"] .j-row .j-mark,
+[data-design="journal"] .task.done .j-mark {
   width: auto;
   height: auto;
   border: 0;
@@ -502,34 +511,27 @@ html[data-design="journal"] body {
   border-radius: 0;
   background: none;
   color: var(--ink);
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 4px;
   font-size: 13px;
   font-weight: 400;
-  display: grid;
-  place-items: center;
-  padding: 4px;
 }
-[data-design="journal"] .j-sign:disabled { opacity: 0.55; }
-/* An unsigned row carries a "sign here" flag, like a document left for signature */
-[data-design="journal"] .j-sign-here {
-  display: inline-block;
-  padding: 4px 9px 4px 15px;
+[data-design="journal"] .j-box { display: block; width: 24px; height: 24px; border: 1.5px solid var(--ink); background: var(--sheet); }
+[data-design="journal"] .j-mark:active .j-box { background: var(--ink-soft); }
+[data-design="journal"] .j-mark:disabled { opacity: 1; }
+[data-design="journal"] .j-mark:disabled .j-box { border-color: var(--rule); }
+[data-design="journal"] .j-tick {
+  display: block;
+  width: 24px;
+  height: 24px;
   background: var(--ink);
-  color: var(--on-accent);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.2;
-  clip-path: polygon(8px 0, 100% 0, 100% 100%, 8px 100%, 0 50%);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.2 12.6c1.9 1.3 3.4 3 4.6 5.3 2.3-5.2 6-9.6 10.9-13'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.2 12.6c1.9 1.3 3.4 3 4.6 5.3 2.3-5.2 6-9.6 10.9-13'/%3E%3C/svg%3E") center / contain no-repeat;
 }
-[data-design="journal"] .j-sign:disabled .j-sign-here { background: var(--pencil); }
-[data-design="journal"] .j-signature {
-  display: inline-block;
-  font-family: var(--font-hand);
-  font-size: 18px;
-  line-height: 1;
-  color: var(--ink);
-  white-space: nowrap;
-  transform: rotate(-7deg);
-}
+[data-design="journal"] .j-time { font-size: 12px; color: var(--pencil); font-variant-numeric: tabular-nums; line-height: 1; }
 [data-design="journal"] .task.done .j-row-text { color: var(--print); text-decoration: none; }
 [data-design="journal"] .zone-filter { margin: 12px 0 0; }
 
@@ -538,7 +540,6 @@ html[data-design="journal"] body {
 [data-design="journal"] .sheet { border-radius: 0; background: var(--sheet); border-color: var(--rule); }
 [data-design="journal"] .sheet-handle { background: var(--ink); opacity: 0.35; }
 [data-design="journal"] .sheet-body h3 { font-size: 19px; }
-[data-design="journal"] .j-order-sheet { display: grid; gap: 2px; }
 [data-design="journal"] .status { font-weight: 700; }
 [data-design="journal"] .status-green { color: var(--ink); }
 [data-design="journal"] .ring-text strong { font-family: var(--font-display); color: var(--ink); }
@@ -552,4 +553,3 @@ html[data-design="journal"] body {
 [data-design="journal"] .bar-fill { background: var(--ink); }
 [data-design="journal"] .skeleton { border-radius: 0; }
 [data-design="journal"] .toast { border-radius: 0; }
-[data-design="journal"] .design-picker .chip.selected { background: var(--violet); border-color: var(--violet); }

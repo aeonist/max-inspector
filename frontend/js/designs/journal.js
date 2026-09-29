@@ -1,13 +1,13 @@
 // Design «Журнал»: the app as the paper forms the inspector checks.
-// Readiness is the filled-in checklist form on squared paper, a square per question.
-// The audit ticks the form's own «Да / Нет / Неприменимо» columns, staff sign the shift journal,
-// and a fix comes to the owner as an act to sign.
+// Readiness is the filled-in checklist form on squared paper, a square per question, with the totals
+// and the conclusion typeset under it. The audit ticks the form's own «Да / Нет / Неприменимо» columns,
+// staff mark the shift journal with the time of each duty, and a fix comes to the owner as an act to accept.
 
 (function () {
   const CELL_WORDS = {
     compliant: "да",
     violation: "нет, нарушение",
-    review: "исправлено, ждёт подписи",
+    review: "исправлено, ждёт проверки",
     na: "неприменимо",
     empty: "не отмечено",
   };
@@ -20,25 +20,35 @@
     return answer ? answer.status : "empty";
   }
 
+  function defectSets(defects) {
+    return {
+      review: new Set(defects.filter((d) => d.status === "fixed").map((d) => d.item_id)),
+      open: new Set(defects.filter((d) => d.status !== "fixed" && d.item_id).map((d) => d.item_id)),
+    };
+  }
+
+  function cells(section, answers, sets, { act = "", current = null }) {
+    const items = Checklist.items.filter((item) => item.section === section);
+    const name = SECTION_SHORT[section] || section;
+    return items.map((item, i) => {
+      const state = cellState(item.id, answers, sets.open, sets.review);
+      const label = `${name}, вопрос ${i + 1}: ${CELL_WORDS[state]}`;
+      return act
+        ? html`<button type="button" class="j-cell${item.id === current ? " current" : ""}" data-s="${state}" data-act="${act}" data-id="${item.id}" aria-label="${label}"></button>`
+        : html`<i class="j-cell" data-s="${state}"></i>`;
+    });
+  }
+
   // The checklist form: a row of squares per section, in the order of the walk through the premises
   function formGrid(answers, defects, { act, current = null, sections = SECTION_ORDER, labels = true }) {
-    const review = new Set(defects.filter((d) => d.status === "fixed").map((d) => d.item_id));
-    const open = new Set(defects.filter((d) => d.status !== "fixed" && d.item_id).map((d) => d.item_id));
+    const sets = defectSets(defects);
     return html`<div class="j-grid${labels ? "" : " j-grid-bare"}">
-      ${sections.map((section) => {
-        const items = Checklist.items.filter((item) => item.section === section);
-        const name = SECTION_SHORT[section] || section;
-        return html`<div class="j-grid-row">
-          ${labels ? html`<span class="j-grid-label">${name}</span>` : ""}
-          <span class="j-cells">
-            ${items.map((item, i) => {
-              const state = cellState(item.id, answers, open, review);
-              return html`<button type="button" class="j-cell${item.id === current ? " current" : ""}" data-s="${state}" data-act="${act}" data-id="${item.id}"
-                aria-label="${name}, вопрос ${i + 1}: ${CELL_WORDS[state] || state}"></button>`;
-            })}
-          </span>
-        </div>`;
-      })}
+      ${sections.map(
+        (section) => html`<div class="j-grid-row">
+          ${labels ? html`<span class="j-grid-label">${SECTION_SHORT[section] || section}</span>` : ""}
+          <span class="j-cells">${cells(section, answers, sets, { act, current })}</span>
+        </div>`
+      )}
     </div>`;
   }
 
@@ -50,26 +60,35 @@
     </ul>`;
   }
 
-  // The verdict as a rubber stamp, with the numbers written into the form's blanks
+  // What is missing before an inspection, in the words of the rule: 90 % and no open violations
+  function missing(s) {
+    const parts = [];
+    if (s.unresolved) parts.push(`устранить ${s.unresolved} ${plural(s.unresolved, "нарушение", "нарушения", "нарушений")}`);
+    if (s.index < 90) parts.push("довести соблюдение до 90\u00a0%");
+    return parts.join(" и ");
+  }
+
+  // The totals under the form, set like the last lines of a printed act
   function verdict(s) {
-    let tone = "pencil";
-    let label = "Аудит не начат";
-    if (s.started) {
-      if (s.ready) {
-        tone = "violet";
-        label = "Готово к проверке";
-      } else if (s.index >= 70) {
-        tone = "violet";
-        label = "Почти готово";
-      } else {
-        tone = "red";
-        label = "Есть что исправить";
-      }
+    let conclusion = "Аудит не начат";
+    let tone = "";
+    let note = "Отметьте вопросы проверочного листа по разделам, начиная с документов.";
+    if (s.started && s.ready) {
+      conclusion = "Готово к проверке";
+      tone = "ok";
+      note = "Соблюдено от 90\u00a0% требований, открытых нарушений нет.";
+    } else if (s.started) {
+      conclusion = "Не готово к проверке";
+      tone = "bad";
+      note = `Осталось ${missing(s)}.`;
     }
     return html`<div class="j-verdict">
-      <p class="j-blank"><span>Соблюдено требований</span><span class="j-hand">${s.index} %</span></p>
-      <p class="j-blank"><span>Нарушений не устранено</span><span class="j-hand">${s.unresolved}</span></p>
-      <span class="j-stamp j-stamp-${tone}">${label}</span>
+      <dl class="j-totals">
+        <div><dt>Соблюдено требований</dt><dd>${s.index}\u00a0%</dd></div>
+        <div><dt>Нарушений не устранено</dt><dd>${s.unresolved}</dd></div>
+        <div class="j-conclusion ${tone}"><dt>Заключение</dt><dd>${conclusion}</dd></div>
+      </dl>
+      <p class="j-pencil">${note}</p>
     </div>`;
   }
 
@@ -106,20 +125,19 @@
     return html`${roleTabs("home")}
       <section class="j-form">
         <h2 class="j-title">Проверочный лист</h2>
-        <p class="j-pencil">Отмечено ${s.answered} из ${s.total}. Нажмите на клетку, чтобы открыть вопрос.</p>
+        <p class="j-pencil">Отмечено ${s.answered} из ${s.total} вопросов. Клетка открывает вопрос.</p>
         ${formGrid(answers, state.defects, { act: "journalCell" })}
         ${legend()}
       </section>
 
       <section class="j-result">
         ${verdict(s)}
-        <p class="j-pencil">Готово к проверке, когда соблюдено от 90 % требований и нет открытых нарушений.</p>
         <button type="button" class="btn btn-primary" data-act="${left ? "goAudit" : "goAuditSummary"}">${auditButton}</button>
       </section>
 
       ${review.length
         ? html`<section class="section" id="sec-review">
-            <h2>Ждут вашей подписи <span class="count">${review.length}</span></h2>
+            <h2>Ждут вашей проверки <span class="count">${review.length}</span></h2>
             ${review.map((d) => actCard(d))}
           </section>`
         : ""}
@@ -138,7 +156,7 @@
               ${team.map(
                 (d) => html`<button type="button" class="j-tr" data-act="teamDefect" data-id="${d.id}">
                   <span class="j-td-main">${d.title}</span>
-                  <span class="j-td-side">${d.assigned_position}<small>${DEFECT_STATUS[d.status]}${d.return_reason ? html`: ${d.return_reason.toLowerCase()}` : ""}</small></span>
+                  <span class="j-td-side">${d.assigned_position}<small class="${d.status === "returned" ? "j-red" : ""}">${d.status === "returned" ? "вернули на доработку" : "ждёт исправления"}</small></span>
                 </button>`
               )}
             </div>
@@ -157,13 +175,19 @@
       ${chatButton()}`;
   }
 
+  // "Мария Петрова, повар": who did the fix, with the position when it adds something
+  function doneBy(d) {
+    if (!d.fixed_by) return d.assigned_position || "не указан";
+    return d.assigned_position ? `${d.fixed_by}, ${d.assigned_position.toLowerCase()}` : d.fixed_by;
+  }
+
   // A fix to review, as an act with both photos pasted in
   function actCard(d) {
     return html`<article class="j-sheet j-act" id="defect-${d.id}">
-      <p class="j-sheet-head"><span>Акт устранения № ${d.id}</span><span>${d.fixed_at || ""}</span></p>
+      <p class="j-sheet-head"><span>${d.zone}</span>${d.fixed_at ? html`<span>исправлено ${d.fixed_at}</span>` : ""}</p>
       <h3>${d.title}</h3>
       ${photoPair(d.before_photos, "Было", d.after_photos, "Стало")}
-      <p class="j-line"><span>Исполнитель</span>${d.fixed_by || d.assigned_position || "не указан"}${d.fixed_by && d.assigned_position ? `, ${d.assigned_position.toLowerCase()}` : ""}</p>
+      <p class="j-line"><span>Исполнитель</span>${doneBy(d)}</p>
       <div class="row-buttons">
         <button type="button" class="btn btn-primary" data-act="acceptFix" data-id="${d.id}">Принять</button>
         <button type="button" class="btn btn-secondary" data-act="returnFix" data-id="${d.id}">Вернуть</button>
@@ -174,7 +198,9 @@
   function ownTask(d) {
     const isProblem = d.kind === "problem";
     return html`<article class="j-sheet" id="defect-${d.id}">
-      <p class="j-sheet-head"><span>${isProblem ? "Сообщение от сотрудника" : d.zone}</span><span>${d.status === "returned" ? "возвращено" : d.created_at || ""}</span></p>
+      <p class="j-sheet-head"><span>${isProblem ? "Сообщение от сотрудника" : d.zone}</span>${d.status === "returned"
+        ? html`<span class="j-red">вернули на доработку</span>`
+        : d.created_at ? html`<span>${d.created_at}</span>` : ""}</p>
       <h3>${d.title}</h3>
       ${isProblem && d.comment && d.comment !== d.title ? html`<p>${d.comment}</p>` : ""}
       ${d.remediation ? html`<p class="j-line"><span>Что сделать</span>${d.remediation}</p>` : ""}
@@ -188,45 +214,67 @@
     </article>`;
   }
 
-  // A team violation as the order the staff member got
+  // A team violation as the task the staff member got
   function teamDefect(el) {
     const d = App.ownerState.defects.find((x) => x.id === Number(el.dataset.id));
     if (!d) return;
     sheet(
       html`<div class="j-order-sheet">
-        <p class="j-sheet-head"><span>Предписание № ${d.id}</span><span>${d.created_at || ""}</span></p>
+        <p class="j-sheet-head"><span>${d.zone}</span>${d.created_at ? html`<span>${d.created_at}</span>` : ""}</p>
         <h3>${d.title}</h3>
-        <p class="j-line"><span>Зона</span>${d.zone}</p>
-        <p class="j-line"><span>Ответственный</span>${d.assigned_position}</p>
-        <p class="j-line"><span>Состояние</span>${DEFECT_STATUS[d.status]}</p>
+        <p class="j-line"><span>Исправляет</span>${d.assigned_position}</p>
+        <p class="j-line"><span>Сейчас</span>${DesignCommon.defectStatus[d.status]}</p>
         ${d.return_reason ? html`<p class="j-line j-line-red"><span>Вернули</span>${d.return_reason}</p>` : ""}
-        ${photoPair(d.before_photos, "Как сейчас", d.reference_photo, "Как должно быть")}
         ${d.remediation ? html`<p class="j-line"><span>Что сделать</span>${d.remediation}</p>` : ""}
-        <p class="j-pencil">Когда пришлют фото исправления, акт появится в «Ждут вашей подписи».</p>
+        ${photoPair(d.before_photos, "Как сейчас", d.reference_photo, "Как должно быть")}
+        <p class="j-pencil">Когда сотрудник пришлёт фото исправления, акт появится в разделе «Ждут вашей проверки».</p>
       </div>`,
       [{ label: "Закрыть", value: null }]
     );
   }
 
-  // Accepting a fix stamps the act before the cabinet refreshes
+  // Accepting a fix: the act gets its acceptance line, then the cabinet refreshes
   function acceptFix(el) {
     return busy(el, async () => {
       const res = await api("POST", `/api/owner/defects/${el.dataset.id}/accept`);
       Bridge.haptic("success");
-      await pressStamp(el.closest(".j-act"), "Принято");
-      toast(`Принято ✓ Готовность: ${res.summary.index}%`, { type: "success" });
+      await markAccepted(el.closest(".j-act"));
+      toast(`Исправление принято. Соблюдено требований: ${res.summary.index}\u00a0%`, { type: "success" });
       await Router.refresh();
     });
   }
 
-  function pressStamp(card, text) {
-    if (!card) return Promise.resolve();
-    const mark = document.createElement("span");
-    mark.className = "j-stamp j-stamp-violet j-stamp-press";
-    mark.textContent = text;
-    card.appendChild(mark);
+  function markAccepted(card) {
+    const buttons = card && card.querySelector(".row-buttons");
+    if (!buttons) return Promise.resolve();
+    const line = document.createElement("p");
+    line.className = "j-line j-accepted";
+    mount(line, html`<span>Принято</span>вами сегодня в ${DesignCommon.nowTime()}`);
+    buttons.replaceWith(line);
     const quick = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    return new Promise((resolve) => setTimeout(resolve, quick ? 300 : 750));
+    return new Promise((resolve) => setTimeout(resolve, quick ? 300 : 900));
+  }
+
+  // Sections as the rows of the same form: a tap opens the section at its first unmarked question
+  function auditSections() {
+    const current = Router.current.params.itemId;
+    const currentSection = current && Checklist.byId[current] ? Checklist.byId[current].section : "";
+    const sets = defectSets(App.ownerState.defects || []);
+    sheet(
+      html`<h3>Разделы проверочного листа</h3>
+        <p class="j-pencil">Разделы идут в порядке обхода заведения. Начать можно с любого.</p>
+        <div class="j-grid j-grid-pick">
+          ${SECTION_ORDER.map((section) => {
+            const st = Audit.sectionStats(section);
+            return html`<button type="button" class="j-grid-row${section === currentSection ? " current" : ""}" data-act="openSection" data-section="${section}">
+              <span class="j-grid-label">${SECTION_SHORT[section] || section}</span>
+              <span class="j-cells">${cells(section, Audit.answers, sets, {})}</span>
+              <span class="j-grid-count">${st.answered} из ${st.total}</span>
+            </button>`;
+          })}
+        </div>`,
+      [{ label: "Закрыть", value: null }]
+    );
   }
 
   // ---------- Audit ----------
@@ -243,8 +291,7 @@
     const status = answer ? answer.status : "";
     const total = Audit.order.length;
     const answeredAll = Object.keys(Audit.answers).length;
-    const position = Audit.order.indexOf(id) + 1;
-    const sectionNo = SECTION_ORDER.indexOf(item.section) + 1;
+    const inSection = Checklist.items.filter((i) => i.section === item.section);
     const official = (item.checklist_ref || "").match(/вопр\.\s*(\d+)/);
     const prev = Audit.prev(id);
     const next = Audit.next(id);
@@ -254,18 +301,18 @@
       html`<header class="topbar">
           <button type="button" class="topbar-back" data-act="auditExit" aria-label="Выйти из аудита">‹</button>
           <h1>Аудит</h1>
-          <span class="saved" id="savedMark" hidden>Сохранено ✓</span>
+          <span class="saved" id="savedMark" hidden>Сохранено</span>
           <button type="button" class="topbar-action" data-act="auditSections">Разделы</button>
         </header>
         <main class="screen audit-screen j-audit">
           <section class="j-audit-head">
             <h2 class="j-title">${item.section}</h2>
             ${formGrid(Audit.answers, App.ownerState.defects || [], { act: "auditGo", current: id, sections: [item.section], labels: false })}
-            <p class="j-pencil">Раздел ${sectionNo} из ${SECTION_ORDER.length}. Всего отмечено ${answeredAll} из ${total}.</p>
+            <p class="j-pencil">Вопрос ${inSection.indexOf(item) + 1} из ${inSection.length} в разделе. Всего отмечено ${answeredAll} из ${total}.</p>
           </section>
 
           <article class="j-sheet j-question question-card">
-            <p class="j-sheet-head"><span>Вопрос ${position} из ${total}</span>${official ? html`<span>№ ${official[1]} в проверочном листе</span>` : ""}</p>
+            ${official ? html`<p class="j-sheet-head"><span>Вопрос ${official[1]} проверочного листа</span></p>` : ""}
             <h2 class="question">${item.question}</h2>
             ${item.norm ? html`<p class="j-norm">${item.norm}</p>` : ""}
             ${item.applies_to ? html`<p class="j-pencil">Применимо, если: ${item.applies_to.toLowerCase()}.</p>` : ""}
@@ -283,11 +330,13 @@
             )}
           </div>
           <p class="answer-hint j-pencil">${compliantPhotoRequired()
-            ? "«Да» и «Нет» подтверждаются фото — так настроено в правилах работы. Фото к «Да» станет эталоном для сотрудников."
-            : "«Нет» — это нарушение, его подтверждают фото. К «Да» фото по желанию, оно станет эталоном для сотрудников."}</p>
+            ? "К «Да» и к «Нет» нужно фото: так настроено в правилах работы. Фото к «Да» станет образцом для сотрудников."
+            : "К «Нет» нужно фото нарушения. К «Да» фото по желанию: оно станет образцом для сотрудников."}</p>
           <div class="row-between audit-nav">
-            ${prev ? html`<button type="button" class="btn-link" data-act="auditGo" data-id="${prev}">‹ Предыдущий</button>` : html`<span></span>`}
-            ${next ? html`<button type="button" class="btn-link" data-act="auditGo" data-id="${next}">Пропустить ›</button>` : html`<button type="button" class="btn-link" data-act="auditDone">К итогам ›</button>`}
+            ${prev ? html`<button type="button" class="btn-link" data-act="auditGo" data-id="${prev}">Предыдущий</button>` : html`<span></span>`}
+            ${next
+              ? html`<button type="button" class="btn-link" data-act="auditGo" data-id="${next}">Пропустить</button>`
+              : html`<button type="button" class="btn-link" data-act="auditDone">К итогам</button>`}
           </div>
         </main>`
     );
@@ -297,20 +346,14 @@
   // ---------- Shift journal ----------
 
   function today() {
-    const text = new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
+    const text = new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Moscow" });
     return text.charAt(0).toUpperCase() + text.slice(1);
   }
 
-  // "Мария Петрова" signs as "М. Петрова"
-  function signature(name) {
-    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
-    if (parts.length < 2) return parts[0] || "";
-    return `${parts[0].charAt(0)}. ${parts[parts.length - 1]}`;
-  }
-
-  function taskMark(done) {
-    if (!done) return html`<span class="j-sign-here">подписать</span>`;
-    return html`<span class="j-signature">${signature(Staff.shift && Staff.shift.employee.full_name)}</span>`;
+  // The mark column of the journal: an empty box, or a tick with the time the duty was done
+  function taskMark(done, time) {
+    if (!done) return html`<span class="j-box" aria-hidden="true"></span>`;
+    return html`<span class="j-tick" aria-hidden="true"></span><span class="j-time">${time || DesignCommon.nowTime()}</span>`;
   }
 
   function zoneRank(zone) {
@@ -329,7 +372,7 @@
     const done = data.duties.filter((d) => d.done).length;
     const zoneCount = (zone) => {
       const list = data.duties.filter((d) => zone === "all" || d.zone === zone);
-      return `${list.filter((d) => d.done).length}/${list.length}`;
+      return `${list.filter((d) => d.done).length} из ${list.length}`;
     };
     let row = 0;
 
@@ -337,28 +380,29 @@
       <section class="j-shift-head">
         <h2 class="j-title">Журнал смены</h2>
         <p class="j-date">${today()}</p>
-        <p class="j-who">${data.employee.full_name}, ${isOwner ? "все задачи смены" : data.employee.position.toLowerCase()}</p>
-        ${isOwner ? html`<button type="button" class="btn-link small" data-act="ownerRoleMenu">Выйти из роли сотрудника</button>` : ""}
+        <p class="j-line"><span>Сотрудник</span>${data.employee.full_name}, ${isOwner ? "все задачи смены" : data.employee.position.toLowerCase()}</p>
         ${shift
-          ? html`<span class="j-stamp j-stamp-violet j-stamp-small">Смена открыта ${shift.started}${shift.checkin === "qr" ? ", по QR" : ""}</span>`
-          : html`<p class="j-pencil">Смена ещё не открыта.</p>${shiftStart(data)}`}
+          ? html`<p class="j-line"><span>Смена</span>открыта в ${shift.started}${shift.checkin === "qr" ? " по QR-коду на месте" : ""}</p>`
+          : html`<p class="j-line"><span>Смена</span>ещё не открыта</p>${shiftStart(data)}`}
+        ${isOwner ? html`<button type="button" class="btn-link small" data-act="ownerRoleMenu">Выйти из роли сотрудника</button>` : ""}
       </section>
 
       ${urgent.length
         ? html`<section class="section j-orders">
-            <h2>Предписание <span class="count">${urgent.length}</span></h2>
+            <h2>Нужно исправить <span class="count">${urgent.length}</span></h2>
             ${urgent.map((d) => orderCard(d))}
           </section>`
         : ""}
 
       ${onReview.length
         ? html`<section class="section">
-            <h2>На подписи у руководителя <span class="count">${onReview.length}</span></h2>
+            <h2>Ждёт проверки руководителя <span class="count">${onReview.length}</span></h2>
             ${onReview.map(
               (d) => html`<article class="j-sheet defect-card" id="defect-${d.id}">
+                <p class="j-sheet-head"><span>${d.zone}</span>${d.fixed_at ? html`<span>отправлено ${d.fixed_at}</span>` : ""}</p>
                 <h3>${d.title}</h3>
                 ${photoPair(d.before_photos, "Было", d.after_photos, "Стало")}
-                <p class="j-pencil">Руководитель сравнит фото и подпишет акт.</p>
+                <p class="j-pencil">Руководитель сравнит фото и примет исправление или вернёт его с причиной.</p>
               </article>`
             )}
           </section>`
@@ -367,17 +411,17 @@
       <section class="section j-log">
         <h2>Задачи смены <span class="count">${done} из ${data.duties.length}</span></h2>
         ${data.duties.length
-          ? html`${shift ? "" : html`<p class="j-pencil">Расписываться за задачи можно после начала смены.</p>`}
+          ? html`${shift ? "" : html`<p class="j-pencil">Отмечать задачи можно после начала смены.</p>`}
             ${zoneNames.length > 1
               ? html`<div class="chips chips-small zone-filter">
-                  <button type="button" class="chip ${Staff.zone === "all" ? "selected" : ""}" data-act="filterZone" data-zone="all">Все ${zoneCount("all")}</button>
+                  <button type="button" class="chip ${Staff.zone === "all" ? "selected" : ""}" data-act="filterZone" data-zone="all">Все <span class="j-chip-n">${zoneCount("all")}</span></button>
                   ${zoneNames.map(
-                    (z) => html`<button type="button" class="chip ${Staff.zone === z ? "selected" : ""}" data-act="filterZone" data-zone="${z}">${z} ${zoneCount(z)}</button>`
+                    (z) => html`<button type="button" class="chip ${Staff.zone === z ? "selected" : ""}" data-act="filterZone" data-zone="${z}">${z} <span class="j-chip-n">${zoneCount(z)}</span></button>`
                   )}
                 </div>`
               : ""}
             <ol class="task-list j-rows">
-              <li class="j-rows-head" aria-hidden="true"><span>№</span><span>Задача</span><span>Подпись</span></li>
+              <li class="j-rows-head" aria-hidden="true"><span>№</span><span>Задача</span><span>Отметка</span></li>
               ${visible.map(
                 (zone) => html`<li class="j-rows-zone">${zone}</li>
                   ${data.duties
@@ -387,10 +431,10 @@
                       return html`<li class="task j-row ${d.done ? "done" : ""}">
                         <span class="j-row-n">${row}</span>
                         <button type="button" class="j-row-text" data-act="taskMenu" data-id="${d.id}">${d.question}${d.photos.length
-                          ? html` <span class="j-pencil"><i class="ico" data-i="camera" aria-hidden="true"></i> ${d.photos.length}</span>`
+                          ? html`<span class="j-pencil block"><i class="ico" data-i="camera" aria-hidden="true"></i> Фото: ${d.photos.length}</span>`
                           : ""}${isOwner && d.position ? html`<span class="j-pencil block">${d.position}</span>` : ""}</button>
-                        <button type="button" class="task-check j-sign" data-act="toggleTask" data-id="${d.id}" data-done="${d.done ? "1" : ""}" ${raw(shift ? "" : "disabled")}
-                          aria-label="${d.done ? "Снять подпись" : "Расписаться за задачу"}">${taskMark(d.done)}</button>
+                        <button type="button" class="task-check j-mark" data-act="toggleTask" data-id="${d.id}" data-done="${d.done ? "1" : ""}" ${raw(shift ? "" : "disabled")}
+                          aria-label="${d.done ? "Снять отметку" : "Отметить выполненной"}">${taskMark(d.done, d.done_at)}</button>
                       </li>`;
                     })}`
               )}
@@ -401,10 +445,10 @@
       ${shiftFooter(shift)}`;
   }
 
-  // An open violation for the shift, written in red like an inspector's order
+  // An open violation for the shift, ruled in red
   function orderCard(d) {
     return html`<article class="j-sheet j-order defect-card urgent" id="defect-${d.id}">
-      <p class="j-sheet-head"><span>${d.zone}</span><span>${d.created_at || ""}</span></p>
+      <p class="j-sheet-head"><span>${d.zone}</span>${d.created_at ? html`<span>${d.created_at}</span>` : ""}</p>
       ${d.status === "returned" ? html`<p class="j-line j-line-red"><span>Вернули</span>${d.return_reason}</p>` : ""}
       <h3>${d.title}</h3>
       ${photoPair(d.before_photos, "Как сейчас", d.reference_photo, "Как должно быть")}
@@ -415,22 +459,29 @@
     </article>`;
   }
 
+  // After a tick is saved: remember its time for the next redraw, and recount
   function updateTaskCounters() {
     const duties = Staff.shift.duties;
+    duties.forEach((d) => {
+      if (d.done && !d.done_at) d.done_at = DesignCommon.nowTime();
+      if (!d.done) d.done_at = null;
+    });
     const count = document.querySelector(".j-log .count");
     if (count) count.textContent = `${duties.filter((d) => d.done).length} из ${duties.length}`;
   }
 
-  // Audit results: the same stamp and blanks as in the cabinet
+  // Audit results: the same totals as in the cabinet
   function readinessRing(summary) {
     return verdict(summary);
   }
 
   Design.register("journal", "Журнал", {
-    globals: { renderAuditItem, shiftView, taskMark, updateTaskCounters, readinessRing },
+    globals: { ...DesignCommon.globals, renderAuditItem, shiftView, taskMark, updateTaskCounters, readinessRing },
     actions: {
+      ...DesignCommon.actions,
       teamDefect,
       acceptFix,
+      auditSections,
       journalCell: (el) => Router.go("audit", { itemId: Number(el.dataset.id) }, { base: "home" }),
     },
     screens: { home: { render: renderHome } },
