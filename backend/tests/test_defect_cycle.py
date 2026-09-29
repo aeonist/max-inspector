@@ -1,3 +1,5 @@
+import re
+
 from conftest import OWNER, STAFF, headers, join
 
 FRYER_ITEM = 26  # "Контролируется ли ежедневно фритюрный жир…", cook's duty with a reference photo
@@ -84,8 +86,11 @@ def test_shift_tasks(client, facility):
     client.post("/api/shift/start", headers=h)
     shift = client.get("/api/shift", headers=h).json()
     duty = shift["duties"][0]
+    assert duty["done"] is False and duty["done_at"] is None
     res = client.post(f"/api/shift/tasks/{duty['id']}", headers=h, json={"done": True})
     assert res.json()["stats"]["done"] == 1
+    marked = next(d for d in client.get("/api/shift", headers=h).json()["duties"] if d["id"] == duty["id"])
+    assert marked["done"] is True and re.fullmatch(r"\d\d:\d\d", marked["done_at"])
     # The owner may take any duty, a waiter's too
     waiter_item = next(k for k, v in facility["assignments"].items() if v == "Официант")
     assert client.post(f"/api/shift/tasks/{waiter_item}", headers=h, json={"done": True}).status_code == 200

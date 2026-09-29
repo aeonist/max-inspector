@@ -32,7 +32,7 @@ Actions.tryDemo = (el) =>
   busy(el, async () => {
     await api("POST", "/api/facility/demo");
     App.me = await api("GET", "/api/me");
-    toast("Демо-кафе готово: загляните в «Ждут вашей проверки»", { type: "success", duration: 5000 });
+    toast("Демо-кафе готово: начните с проверки исправления от повара", { type: "success", duration: 5000 });
     await Router.go("home", {}, { reset: true });
   });
 
@@ -83,6 +83,7 @@ function route(param) {
 }
 
 async function boot() {
+  Design.use(document.documentElement.dataset.design || "");
   Bridge.ready();
   Auth.init();
   document.body.classList.toggle("is-mobile", Bridge.isMobile);

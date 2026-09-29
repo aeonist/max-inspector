@@ -1,0 +1,425 @@
+/* Design «Маршрут»: the café as a line map of the inspector's walk.
+   One line in one colour: solid where the walk is done, dashed where it is not. A station's mark
+   says what is there, a number of things to act on or how far it is walked; what needs doing hangs
+   off its station. A cook's duties are stops on the line of their zones.
+   Applies only with <html data-design="route">. */
+
+@font-face { font-family: "Fira Sans"; font-weight: 400; font-display: swap; src: url("../../fonts/fira-sans-cyrillic-400-normal.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "Fira Sans"; font-weight: 400; font-display: swap; src: url("../../fonts/fira-sans-latin-400-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Fira Sans"; font-weight: 700; font-display: swap; src: url("../../fonts/fira-sans-cyrillic-700-normal.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "Fira Sans"; font-weight: 700; font-display: swap; src: url("../../fonts/fira-sans-latin-700-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Fira Sans Condensed"; font-weight: 700; font-display: swap; src: url("../../fonts/fira-sans-condensed-cyrillic-700-normal.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "Fira Sans Condensed"; font-weight: 700; font-display: swap; src: url("../../fonts/fira-sans-condensed-latin-700-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+:root[data-design="route"] {
+  --r-line: #1f7a55;
+  --r-rest: #a4afab;
+  --r-bad: #d7322b;
+  --r-ground: #e4e9e7;
+  --r-mark-text: #ffffff;
+
+  --bg: #f1f3f2;
+  --card: #ffffff;
+  --text: #18221f;
+  --muted: #5d6965;
+  --line: #d6dcd9;
+  --accent: #0f6d4b;
+  --accent-press: #0a5238;
+  --accent-soft: #e2efe9;
+  --green: var(--r-line);
+  --green-soft: #e3f3ea;
+  --amber: #8a5a0a;
+  --amber-soft: #fbf0d9;
+  --red: var(--r-bad);
+  --red-soft: #fbe6e4;
+  --gray-soft: var(--r-ground);
+  --radius: 12px;
+  --overlay: rgba(12, 20, 17, 0.5);
+  --on-accent: #ffffff;
+  --toast-bg: #18221f;
+  --toast-text: #ffffff;
+  --toast-ok: #146e41;
+  --toast-err: #a82620;
+  --font-display: "Fira Sans Condensed", "Fira Sans", "Arial Narrow", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-design="route"] {
+    --r-line: #52c290;
+    --r-rest: #5a6862;
+    --r-bad: #ff6a61;
+    --r-ground: #26312d;
+    --r-mark-text: #10201a;
+    --bg: #161d1a;
+    --card: #1f2824;
+    --text: #e6ebe9;
+    --muted: #9aa8a2;
+    --line: #313d38;
+    --accent: #6fd0a3;
+    --accent-press: #93dfbb;
+    --accent-soft: #1f3129;
+    --amber: #e8b45a;
+    --green-soft: #1a2d23;
+    --amber-soft: #2d2513;
+    --red-soft: #361d1b;
+    --overlay: rgba(0, 0, 0, 0.62);
+    --on-accent: #161d1a;
+    --toast-bg: #e6ebe9;
+    --toast-text: #161d1a;
+    --toast-ok: #6fd0a3;
+    --toast-err: #ff8a82;
+  }
+}
+
+[data-design="route"] body { font-family: "Fira Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 16px; line-height: 1.45; }
+[data-design="route"] h1,
+[data-design="route"] h2 { font-family: var(--font-display); letter-spacing: 0; text-wrap: balance; }
+[data-design="route"] h1 { font-size: 21px; }
+[data-design="route"] .section > h2 { font-size: 21px; font-weight: 700; border-bottom: 0; padding-bottom: 0; }
+[data-design="route"] h3 { font-size: 16px; }
+[data-design="route"] .count { font-family: "Fira Sans", sans-serif; font-size: 15px; font-weight: 700; color: var(--muted); }
+
+[data-design="route"] .topbar { background: var(--bg); border-bottom-color: var(--line); }
+[data-design="route"] .topbar-back { border-radius: 10px; }
+[data-design="route"] .topbar-action { font-size: 15px; font-weight: 700; }
+[data-design="route"] .saved { font-size: 13px; font-weight: 700; }
+
+[data-design="route"] .card { border-radius: 14px; }
+[data-design="route"] .notice { border-radius: 12px; }
+[data-design="route"] .btn-primary { background: var(--text); border-color: var(--text); }
+[data-design="route"] .btn-primary:active { background: var(--muted); border-color: var(--muted); }
+[data-design="route"] .btn-secondary { border-width: 1.5px; }
+[data-design="route"] .chip { border-radius: 999px; }
+[data-design="route"] .chip.selected { background: var(--text); border-color: var(--text); color: var(--bg); }
+[data-design="route"] .tile { border-radius: 14px; }
+
+[data-design="route"] .role-tabs { background: var(--r-ground); border: 0; border-radius: 12px; padding: 3px; margin: 10px 0 6px; }
+[data-design="route"] .role-tabs button { border-radius: 9px; min-height: 40px; }
+[data-design="route"] .role-tabs button + button { border-left: 0; }
+[data-design="route"] .role-tabs button.active { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+
+[data-design="route"] .r-head { margin: 16px 0 4px; }
+[data-design="route"] .r-title { font-family: var(--font-display); font-size: 30px; font-weight: 700; line-height: 1.05; margin-bottom: 8px; text-transform: none; }
+[data-design="route"] .r-lead { font-size: 16px; line-height: 1.45; }
+
+/* ---------- The line ---------- */
+
+[data-design="route"] .r-route { list-style: none; margin: 16px 0 20px; }
+[data-design="route"] .r-stop { position: relative; padding-left: 44px; }
+/* The stretch from this station to the next: solid once the station is walked, dashed before */
+[data-design="route"] .r-stop::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  top: 22px;
+  bottom: -22px;
+  width: 4px;
+  background: repeating-linear-gradient(to bottom, var(--r-rest) 0 6px, transparent 6px 12px);
+}
+[data-design="route"] .r-stop.r-walked::before { background: var(--r-line); }
+[data-design="route"] .r-stop:last-child::before { display: none; }
+
+/* Name and words share a row; words that do not fit move under the name as a whole */
+[data-design="route"] .r-station {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 12px;
+  width: calc(100% + 44px);
+  min-height: 44px;
+  margin-left: -44px;
+  padding: 9px 0 9px 44px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+[data-design="route"] .r-name { min-width: 0; font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1.2; }
+[data-design="route"] .r-words { margin-left: auto; font-size: 14px; line-height: 1.3; color: var(--muted); text-align: right; }
+[data-design="route"] .r-station:active .r-name { color: var(--accent); }
+
+/* A station's mark: a dot once walked, a ring before, half a ring while it is being walked,
+   and a number when something there needs acting on */
+[data-design="route"] .r-mark {
+  position: absolute;
+  left: 20px;
+  top: 22px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 3px var(--bg);
+  font-family: "Fira Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--r-mark-text);
+  font-variant-numeric: tabular-nums;
+}
+[data-design="route"] .r-mark-ok { background: var(--r-line); }
+[data-design="route"] .r-mark-todo { border: 3px solid var(--r-rest); background: var(--bg); }
+[data-design="route"] .r-mark-part { border: 3px solid var(--r-line); background: linear-gradient(90deg, var(--r-line) 50%, var(--bg) 50%); }
+[data-design="route"] .r-mark-bad,
+[data-design="route"] .r-mark-review { width: 26px; height: 26px; }
+[data-design="route"] .r-mark-bad { background: var(--r-bad); }
+[data-design="route"] .r-mark-review { background: var(--r-line); }
+/* Where the walk stopped */
+[data-design="route"] .r-here > .r-station .r-mark-todo,
+[data-design="route"] .r-here > .r-station .r-mark-part { width: 22px; height: 22px; border-width: 4px; }
+
+/* What hangs off a station: fixes to accept, the owner's tasks, the team's violations */
+[data-design="route"] .r-branches { display: grid; gap: 0; padding: 0 0 14px; }
+[data-design="route"] .r-item {
+  display: block;
+  width: 100%;
+  padding: 12px 0 14px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+[data-design="route"] .r-item h3,
+[data-design="route"] .r-item-title { display: block; font-size: 16px; font-weight: 700; line-height: 1.35; margin: 0; }
+[data-design="route"] .r-item-urgent h3 { color: var(--r-bad); }
+[data-design="route"] .r-item-team { cursor: pointer; }
+[data-design="route"] .r-item-team:active { background: var(--r-ground); }
+[data-design="route"] .r-note { display: block; font-size: 14px; line-height: 1.4; color: var(--muted); margin-top: 3px; }
+[data-design="route"] .r-bad-text { color: var(--r-bad); }
+[data-design="route"] .r-todo-text { font-size: 15px; margin: 8px 0; }
+[data-design="route"] .r-item .btn { margin-top: 12px; }
+[data-design="route"] .r-item .row-buttons .btn { margin-top: 0; }
+[data-design="route"] .r-go { margin-top: 6px; }
+[data-design="route"] .r-loose .r-item:first-of-type { border-top: 0; }
+[data-design="route"] .defect-card.highlight { outline: 3px solid var(--r-bad); outline-offset: 2px; }
+
+/* Documents and team: two plain rows */
+[data-design="route"] .r-links { display: grid; border-top: 1px solid var(--line); }
+[data-design="route"] .r-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+[data-design="route"] .r-link .ico { width: 20px; height: 20px; color: var(--accent); }
+
+/* Photos */
+[data-design="route"] .photo-thumb,
+[data-design="route"] .example { border-radius: 10px; }
+[data-design="route"] .photo-thumb span,
+[data-design="route"] .example span { font-size: 12px; font-weight: 700; padding: 4px 8px; border-top-right-radius: 8px; }
+[data-design="route"] .photo-thumb span { background: rgba(24, 34, 31, 0.8); }
+[data-design="route"] .example.ok span { background: rgba(20, 110, 65, 0.92); }
+[data-design="route"] .example.bad span { background: rgba(168, 38, 32, 0.92); }
+[data-design="route"] .photo-full { border-radius: 12px; }
+
+/* ---------- Audit: the current station opened up on the line ---------- */
+
+[data-design="route"] .r-audit-sum { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
+[data-design="route"] .r-route-audit { margin-top: 8px; }
+[data-design="route"] .r-questions { list-style: none; margin: 0 0 8px; }
+[data-design="route"] .r-q { position: relative; }
+[data-design="route"] .r-qrow {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+[data-design="route"] .r-qtext { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+[data-design="route"] .r-q-bad .r-qtext { color: var(--r-bad); }
+[data-design="route"] .r-qdot {
+  position: absolute;
+  left: -24px;
+  top: 19px;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 3px var(--bg);
+  background: var(--bg);
+  border: 2.5px solid var(--r-rest);
+}
+[data-design="route"] .r-q-ok .r-qdot { border-color: var(--r-line); background: var(--r-line); }
+[data-design="route"] .r-q-bad .r-qdot { border-color: var(--r-bad); background: var(--r-bad); }
+[data-design="route"] .r-q-review .r-qdot { border-color: var(--r-line); }
+[data-design="route"] .r-q-na .r-qdot { border-color: var(--r-rest); background: var(--r-rest); }
+/* You are here: the question being answered */
+[data-design="route"] .r-q-current { padding: 6px 0 2px; }
+[data-design="route"] .r-q-current > .r-qdot { top: 26px; width: 20px; height: 20px; border: 0; background: var(--text); box-shadow: 0 0 0 4px var(--bg); }
+[data-design="route"] .r-card { margin-bottom: 4px; }
+[data-design="route"] .r-qhead { font-size: 13px; color: var(--muted); }
+[data-design="route"] .question-card .question { font-family: "Fira Sans", sans-serif; font-weight: 700; font-size: 20px; line-height: 1.3; text-transform: none; }
+[data-design="route"] .answer-note { border-radius: 10px; border-left-width: 4px; }
+
+[data-design="route"] .r-answers { gap: 8px; background: linear-gradient(to bottom, transparent, var(--bg) 22%); }
+[data-design="route"] .r-answer {
+  align-content: center;
+  gap: 8px;
+  min-height: 76px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  --a: var(--r-line);
+}
+[data-design="route"] .r-answer-bad { --a: var(--r-bad); }
+[data-design="route"] .r-answer-na { --a: var(--r-rest); }
+[data-design="route"] .r-adot { width: 18px; height: 18px; border-radius: 50%; background: var(--a); }
+[data-design="route"] .r-answer.active { border-color: var(--a); background: color-mix(in srgb, var(--a) 13%, var(--card)); }
+[data-design="route"] .r-answer:active { background: var(--r-ground); }
+
+/* Audit results: the ten stations in one row, then named by what they hold */
+[data-design="route"] .card.center:has(.r-mini) { text-align: left; }
+[data-design="route"] .r-mini { display: flex; margin: 6px 0 14px; }
+[data-design="route"] .r-mini-stop { position: relative; flex: 1; display: grid; place-items: center; min-height: 30px; }
+[data-design="route"] .r-mini-stop::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 4px;
+  margin-top: -2px;
+  background: repeating-linear-gradient(90deg, var(--r-rest) 0 5px, transparent 5px 9px);
+}
+[data-design="route"] .r-mini-stop.r-walked::before { background: var(--r-line); }
+[data-design="route"] .r-mini-stop:last-child::before { display: none; }
+[data-design="route"] .r-mini .r-mark { position: relative; left: auto; top: auto; transform: none; box-shadow: 0 0 0 3px var(--card); }
+[data-design="route"] .r-mini .r-mark-todo,
+[data-design="route"] .r-mini .r-mark-part { background-color: var(--card); }
+[data-design="route"] .r-mini .r-mark-part { background: linear-gradient(90deg, var(--r-line) 50%, var(--card) 50%); }
+[data-design="route"] .r-sum { display: grid; margin: 12px 0 4px; }
+[data-design="route"] .r-sum > div { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 15px; }
+[data-design="route"] .r-sum dt { color: var(--muted); font-size: 14px; }
+[data-design="route"] .r-sum dd { margin: 0; }
+
+/* ---------- Shift: zones as stations, duties as stops ---------- */
+
+[data-design="route"] .r-shift-head .btn { margin-top: 12px; }
+[data-design="route"] .r-shift-count { margin-top: 10px; font-size: 15px; }
+[data-design="route"] .r-shift-count strong { font-family: var(--font-display); font-size: 24px; }
+/* A zone opens and closes its duties */
+[data-design="route"] .r-zone { padding-right: 24px; }
+[data-design="route"] .r-zone::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: 19px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: translateY(-2px) rotate(45deg);
+}
+[data-design="route"] .r-zone[aria-expanded="true"]::after { transform: translateY(2px) rotate(-135deg); }
+[data-design="route"] .r-tasks { list-style: none; margin: 0 0 8px; padding: 0; }
+[data-design="route"] .r-task { position: relative; display: block; min-height: 48px; border: 0; }
+[data-design="route"] .r-check {
+  position: absolute;
+  z-index: 1;
+  left: -46px;
+  top: 2px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+[data-design="route"] .r-check::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 10px;
+  top: 10px;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--r-rest);
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: 0 0 0 3px var(--bg);
+}
+[data-design="route"] .task.done .r-check { background: none; border: 0; }
+[data-design="route"] .task.done .r-check::before { border-color: var(--r-line); background: var(--r-line); }
+[data-design="route"] .r-check:disabled { opacity: 1; }
+[data-design="route"] .r-check:disabled::before { border-style: dotted; }
+[data-design="route"] .r-tick {
+  width: 14px;
+  height: 14px;
+  background: var(--r-mark-text);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 12.5l4.8 4.8L19.5 7'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 12.5l4.8 4.8L19.5 7'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+[data-design="route"] .r-task-text {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+[data-design="route"] .r-task-text .block { margin-top: 3px; }
+[data-design="route"] .task.done .r-task-text { color: var(--muted); text-decoration: none; }
+[data-design="route"] .r-tasks .r-task:last-child .r-task-text { border-bottom: 0; }
+
+/* ---------- Everything else ---------- */
+
+[data-design="route"] #sec-shift .list.card { border-radius: 14px; }
+[data-design="route"] .badge { font-size: 12px; font-weight: 700; }
+[data-design="route"] .sheet { border-radius: 18px 18px 0 0; }
+[data-design="route"] .sheet-handle { width: 40px; height: 4px; border-radius: 2px; }
+[data-design="route"] input[type="text"],
+[data-design="route"] select,
+[data-design="route"] textarea { border-radius: 12px; }
+[data-design="route"] .toast { border-radius: 14px; }
+[data-design="route"] .status { font-size: 14px; font-weight: 700; }
+[data-design="route"] .ring-text strong { font-family: var(--font-display); }
+[data-design="route"] .logo { border-radius: 16px; background: var(--text); border-color: var(--text); color: var(--bg); }
+[data-design="route"] .next-step,
+[data-design="route"] .todo-row { border-radius: 14px; }
+[data-design="route"] .next-num { border-radius: 50%; border-width: 4px; border-color: var(--r-line); }
+[data-design="route"] .bar { border-radius: 3px; height: 6px; }
+[data-design="route"] .bar-fill { background: var(--r-line); }
+[data-design="route"] .steps .step { height: 6px; border-radius: 3px; }
+[data-design="route"] .steps .step.on { background: var(--r-line); }
+[data-design="route"] .skeleton { border-radius: 14px; }

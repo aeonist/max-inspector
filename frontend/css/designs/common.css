@@ -1,0 +1,107 @@
+/* Shared by the design variants: removes the chrome of the usual look (bracketed monospace labels,
+   uppercase headings, cream toasts) so every variant starts from plain elements.
+   Applies only with <html data-design="...">; without it the app looks exactly as before. */
+
+:root[data-design] body { -webkit-font-smoothing: antialiased; }
+
+:root[data-design] h2 { text-transform: none; letter-spacing: 0; }
+
+:root[data-design] .count::before,
+:root[data-design] .count::after,
+:root[data-design] .badge::before,
+:root[data-design] .badge::after,
+:root[data-design] .status::before,
+:root[data-design] .status::after,
+:root[data-design] .saved::before,
+:root[data-design] .saved::after { content: none; }
+
+:root[data-design] .count,
+:root[data-design] .badge,
+:root[data-design] .status,
+:root[data-design] .saved,
+:root[data-design] .topbar-action,
+:root[data-design] .todo-title,
+:root[data-design] h3.zone,
+:root[data-design] .photo-thumb span,
+:root[data-design] .photo-count,
+:root[data-design] .example span,
+:root[data-design] .answer span,
+:root[data-design] .ring-text span,
+:root[data-design] .next-num,
+:root[data-design] .field > span {
+  font-family: inherit;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+:root[data-design] .btn-primary { color: var(--on-accent); }
+:root[data-design] .btn-primary.is-busy::after { border-color: var(--on-accent) transparent var(--on-accent) transparent; }
+
+/* A disclosure mark instead of an arrow glued to the text */
+:root[data-design] .link-toggle::after,
+:root[data-design] .link-toggle.open::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-3px) rotate(45deg);
+  transition: transform 0.15s;
+}
+:root[data-design] .link-toggle:not(.open)::after { transform: translateY(-1px) rotate(-45deg); }
+
+:root[data-design] .toast { background: var(--toast-bg); color: var(--toast-text); }
+:root[data-design] .toast-success { background: var(--toast-ok); }
+:root[data-design] .toast-error { background: var(--toast-err); }
+:root[data-design] .toast-action { color: var(--toast-text); border-color: color-mix(in srgb, var(--toast-text) 45%, transparent); }
+
+:root[data-design] :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-design] *,
+  :root[data-design] *::before,
+  :root[data-design] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* A photo button's icon flows with its words (see DesignCommon.photoLabel), so a wrapped label stays one centred text */
+:root[data-design] .btn-text { display: block; text-wrap: balance; }
+:root[data-design] .btn-text .ico { margin-right: 6px; }
+
+/* Links after a sentence in the answer note: their own tap targets, no dots between them */
+:root[data-design] .answer-note .inline-link { display: inline-block; margin-left: 8px; padding: 2px 0; }
+
+/* Facts of a violation in its sheet: a short label column and the value */
+:root[data-design] .facts { display: grid; gap: 0; margin: 0; }
+:root[data-design] .facts > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+:root[data-design] .facts dt { font-size: 13px; color: var(--muted); padding-top: 1px; }
+:root[data-design] .facts dd { margin: 0; }
+:root[data-design] .facts .facts-alert dd { color: var(--red); }
+
+/* Sections sheet: one row per section, the count kept on the row's right edge */
+:root[data-design] .section-list { display: grid; }
+:root[data-design] .section-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+:root[data-design] .section-row:last-child { border-bottom: 0; }
+:root[data-design] .section-count { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+:root[data-design] .section-row.current .section-name { font-weight: 700; }

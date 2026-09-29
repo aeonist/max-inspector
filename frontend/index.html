@@ -6,7 +6,23 @@
   <meta name="color-scheme" content="light dark">
   <title>МАХ-Инспектор</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230a6cff'/%3E%3Cpath d='M18 33l9 9 19-20' stroke='white' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/style.css?v=2026-09-29">
+  <script>
+    // The app looks like «Сейчас». A link with ?design=journal|route|base switches this device to another
+    // look (base is the look before the designs) and is remembered; ?design= returns to «Сейчас».
+    var design = "now";
+    try {
+      var asked = new URLSearchParams(location.search).get("design");
+      if (asked) localStorage.setItem("look", asked);
+      else if (asked !== null) localStorage.removeItem("look");
+      design = localStorage.getItem("look") || design;
+    } catch (e) {}
+    document.documentElement.dataset.design = design;
+  </script>
+  <link rel="stylesheet" href="css/style.css?v=2026-09-29h">
+  <link rel="stylesheet" href="css/designs/common.css?v=2026-09-29h">
+  <link rel="stylesheet" href="css/designs/journal.css?v=2026-09-29h">
+  <link rel="stylesheet" href="css/designs/route.css?v=2026-09-29h">
+  <link rel="stylesheet" href="css/designs/now.css?v=2026-09-29h">
   <script src="https://st.max.ru/js/max-web-app.js"></script>
 </head>
 <body>
@@ -14,11 +30,15 @@
   <div id="toasts" class="toasts" aria-live="polite"></div>
   <div id="sheet-root"></div>
 
-  <script src="js/core.js?v=2026-09-29"></script>
-  <script src="js/owner-setup.js?v=2026-09-29"></script>
-  <script src="js/owner-audit.js?v=2026-09-29"></script>
-  <script src="js/owner-home.js?v=2026-09-29"></script>
-  <script src="js/staff.js?v=2026-09-29"></script>
-  <script src="js/app.js?v=2026-09-29"></script>
+  <script src="js/core.js?v=2026-09-29h"></script>
+  <script src="js/owner-setup.js?v=2026-09-29h"></script>
+  <script src="js/owner-audit.js?v=2026-09-29h"></script>
+  <script src="js/owner-home.js?v=2026-09-29h"></script>
+  <script src="js/staff.js?v=2026-09-29h"></script>
+  <script src="js/designs/common.js?v=2026-09-29h"></script>
+  <script src="js/designs/journal.js?v=2026-09-29h"></script>
+  <script src="js/designs/route.js?v=2026-09-29h"></script>
+  <script src="js/designs/now.js?v=2026-09-29h"></script>
+  <script src="js/app.js?v=2026-09-29h"></script>
 </body>
 </html>

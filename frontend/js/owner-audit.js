@@ -28,6 +28,12 @@ const Audit = {
     return rest.find((id) => !this.answers[String(id)]);
   },
 
+  // Where to start a section: its first unchecked question, or its first one
+  firstInSection(section) {
+    const ids = this.order.filter((id) => Checklist.byId[id].section === section);
+    return ids.find((id) => !this.answers[String(id)]) || ids[0];
+  },
+
   next(id) {
     const i = this.order.indexOf(id);
     return i >= 0 && i < this.order.length - 1 ? this.order[i + 1] : null;
@@ -54,7 +60,7 @@ const Audit = {
 };
 
 Screens.audit = {
-  async render({ itemId }) {
+  async render({ itemId, section }) {
     if (!Audit.order.length || !App.ownerState) {
       mount("#app", screen("Аудит", skeleton(2)));
       try {
@@ -64,7 +70,7 @@ Screens.audit = {
         return;
       }
     }
-    const id = itemId || Audit.firstUnanswered();
+    const id = itemId || (section && Audit.firstInSection(section)) || Audit.firstUnanswered();
     if (!id) {
       Router.go("auditSummary", {}, { replace: true });
       return;
@@ -77,14 +83,10 @@ Screens.audit = {
   },
 };
 
-function renderAuditItem(id) {
-  const item = Checklist.byId[id];
+// What is already known about a question: the answer, its photos, and where its violation went
+function auditAnswerNote(id) {
   const answer = Audit.answers[String(id)];
-  const stats = Audit.sectionStats(item.section);
-  const total = Audit.order.length;
-  const answeredAll = Object.keys(Audit.answers).length;
   const defect = Audit.defectFor(id);
-  const position = Audit.order.indexOf(id) + 1;
   const status = answer ? answer.status : "";
 
   let answerNote = "";
@@ -94,6 +96,43 @@ function renderAuditItem(id) {
   const answerPhotos = answer && answer.status !== "na" ? answer.photos || [] : [];
   if (!answerNote && status === "compliant") answerNote = answerPhotos.length ? `Соблюдается · ${answerPhotos.length} фото` : "Соблюдается";
   const addPhotoLink = status === "compliant" && answer.source === "user" && !answerPhotos.length;
+  if (!answerNote) return "";
+  return html`<p class="answer-note ${status}">${answerNote}${answerPhotos.length
+    ? html` · <button type="button" class="inline-link" data-act="photo" data-srcs="${JSON.stringify(answerPhotos)}" data-caption="${STATUS_LABELS[status] || "Фото"}">посмотреть фото</button>`
+    : ""}${addPhotoLink
+    ? html` · <button type="button" class="inline-link" data-act="addCompliantPhotos" data-id="${id}">добавить фото</button>`
+    : ""}</p>`;
+}
+
+function auditHint() {
+  return compliantPhotoRequired()
+    ? "Оба ответа подтверждаются фото — так настроено в правилах работы. Фото «Соблюдается» станет эталоном для сотрудников."
+    : "Нарушение подтверждается фото. Для «Соблюдается» фото по желанию — оно станет эталоном для сотрудников.";
+}
+
+// Library photos of the question: how it should look and how a violation looks
+function examplePhotos(item) {
+  if (!item.reference_photo && !item.violation_example_photo) return "";
+  return html`<div class="example-photos">
+    ${item.reference_photo
+      ? html`<button type="button" class="example ok" data-act="photo" data-src="/${item.reference_photo}" data-caption="Так правильно">
+          <img src="/${item.reference_photo}" alt="" loading="lazy"><span>✓ Так правильно</span></button>`
+      : ""}
+    ${item.violation_example_photo
+      ? html`<button type="button" class="example bad" data-act="photo" data-src="/${item.violation_example_photo}" data-caption="Так — нарушение">
+          <img src="/${item.violation_example_photo}" alt="" loading="lazy"><span>✕ Так — нарушение</span></button>`
+      : ""}
+  </div>`;
+}
+
+function renderAuditItem(id) {
+  const item = Checklist.byId[id];
+  const answer = Audit.answers[String(id)];
+  const stats = Audit.sectionStats(item.section);
+  const total = Audit.order.length;
+  const answeredAll = Object.keys(Audit.answers).length;
+  const position = Audit.order.indexOf(id) + 1;
+  const status = answer ? answer.status : "";
 
   mount(
     "#app",
@@ -115,26 +154,9 @@ function renderAuditItem(id) {
           <h2 class="question">${item.question}</h2>
           ${item.norm ? html`<p>${item.norm}</p>` : ""}
           ${item.applies_to ? html`<p class="muted small">Применимо, если: ${item.applies_to.toLowerCase()}.</p>` : ""}
-          ${item.reference_photo || item.violation_example_photo
-            ? html`<div class="example-photos">
-                ${item.reference_photo
-                  ? html`<button type="button" class="example ok" data-act="photo" data-src="/${item.reference_photo}" data-caption="Так правильно">
-                      <img src="/${item.reference_photo}" alt="" loading="lazy"><span>✓ Так правильно</span></button>`
-                  : ""}
-                ${item.violation_example_photo
-                  ? html`<button type="button" class="example bad" data-act="photo" data-src="/${item.violation_example_photo}" data-caption="Так — нарушение">
-                      <img src="/${item.violation_example_photo}" alt="" loading="lazy"><span>✕ Так — нарушение</span></button>`
-                  : ""}
-              </div>`
-            : ""}
+          ${examplePhotos(item)}
           ${basisBlock(item, "basis-" + id)}
-          ${answerNote
-            ? html`<p class="answer-note ${status}">${answerNote}${answerPhotos.length
-                ? html` · <button type="button" class="inline-link" data-act="photo" data-srcs="${JSON.stringify(answerPhotos)}" data-caption="${STATUS_LABELS[status] || "Фото"}">посмотреть фото</button>`
-                : ""}${addPhotoLink
-                ? html` · <button type="button" class="inline-link" data-act="addCompliantPhotos" data-id="${id}">добавить фото</button>`
-                : ""}</p>`
-            : ""}
+          ${auditAnswerNote(id)}
         </article>
 
         <div class="answer-bar">
@@ -142,9 +164,7 @@ function renderAuditItem(id) {
           <button type="button" class="answer bad ${status === "violation" ? "active" : ""}" data-act="answerViolation" data-id="${id}">✕<span>Нарушение</span></button>
           <button type="button" class="answer na ${status === "na" ? "active" : ""}" data-act="answerNa" data-id="${id}">—<span>Не применимо</span></button>
         </div>
-        <p class="answer-hint muted small">${compliantPhotoRequired()
-          ? "Оба ответа подтверждаются фото — так настроено в правилах работы. Фото «Соблюдается» станет эталоном для сотрудников."
-          : "Нарушение подтверждается фото. Для «Соблюдается» фото по желанию — оно станет эталоном для сотрудников."}</p>
+        <p class="answer-hint muted small">${auditHint()}</p>
         <div class="row-between audit-nav">
           ${Audit.prev(id) ? html`<button type="button" class="btn-link" data-act="auditGo" data-id="${Audit.prev(id)}">‹ Предыдущий</button>` : html`<span></span>`}
           ${Audit.next(id) ? html`<button type="button" class="btn-link" data-act="auditGo" data-id="${Audit.next(id)}">Пропустить ›</button>` : html`<button type="button" class="btn-link" data-act="auditDone">К итогам ›</button>`}

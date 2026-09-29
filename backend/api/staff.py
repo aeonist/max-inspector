@@ -65,11 +65,14 @@ async def accept_invite(token: str, user: CurrentUser = Depends(current_user), d
 def _shift_payload(db: Session, emp: Employee) -> dict:
     facility = emp.facility
     shift = active_shift(db, emp)
-    done = {t.item_id: t.photos for t in shift.tasks} if shift else {}
+    done = {t.item_id: t for t in shift.tasks} if shift else {}
     duties = duties_for_employee(emp)
     for duty in duties:
-        duty["done"] = duty["id"] in done
-        duty["photos"] = done.get(duty["id"], [])
+        task = done.get(duty["id"])
+        duty["done"] = task is not None
+        duty["photos"] = task.photos if task else []
+        # When the duty was marked, for a design that shows it like a journal entry
+        duty["done_at"] = format_local_time(task.done_at) if task else None
     defects = [audit.defect_to_dict(d, facility) for d in audit.defects_for_employee(db, emp)]
     return {
         "employee": {"full_name": emp.full_name, "position": emp.position, "is_owner": bool(emp.is_owner)},
