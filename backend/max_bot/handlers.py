@@ -27,6 +27,15 @@ from utils.timefmt import format_local_time
 logger = logging.getLogger(__name__)
 
 
+# Answer a button tap. MAX rejects an empty answer (400 "message or notification required"),
+# so every tap gets a short notification; a failed answer never stops the handler
+async def _ack(callback: MessageCallback, notification: str) -> None:
+    try:
+        await callback.ack(notification=notification)
+    except Exception as e:
+        logger.warning(f"Callback answer failed: {e}")
+
+
 async def _reply(user_id: int, text: str, keyboard=None) -> None:
     attachments = [keyboard.as_markup()] if keyboard else []
     await bot.send_message(user_id=user_id, text=text, attachments=attachments)
@@ -160,13 +169,13 @@ async def callback_role_owner(callback: MessageCallback):
         fac = create_facility(db, user_id)
         setup_done = fac.setup_done
     except ValueError as e:
-        await callback.ack()
+        await _ack(callback, "Вы уже в команде")
         await _reply(user_id, str(e))
         await _send_home(user_id)
         return
     finally:
         db.close()
-    await callback.ack()
+    await _ack(callback, "Готово")
     if setup_done:
         await _send_home(user_id)
         return
@@ -182,7 +191,7 @@ async def callback_role_owner(callback: MessageCallback):
 async def callback_demo(callback: MessageCallback):
     user = callback.callback.user
     name = " ".join(p for p in (user.first_name, user.last_name) if p)
-    await callback.ack()
+    await _ack(callback, "Готовим демо-кафе…")
     db = SessionLocal()
     try:
         start_demo(db, user.user_id, name)
@@ -203,7 +212,7 @@ async def callback_demo(callback: MessageCallback):
 @dp.message_callback(F.callback.payload == "role_employee")
 async def callback_role_employee(callback: MessageCallback):
     user_id = callback.callback.user.user_id
-    await callback.ack()
+    await _ack(callback, "Нужно приглашение")
     await _reply(
         user_id,
         "Попросите руководителя прислать вам личное приглашение в MAX — или отсканируйте QR с экрана его телефона.",
@@ -215,7 +224,7 @@ async def callback_role_employee(callback: MessageCallback):
 async def callback_accept_invite(callback: MessageCallback):
     user_id = callback.callback.user.user_id
     token = (callback.callback.payload or "").removeprefix("inv_")
-    await callback.ack()
+    await _ack(callback, "Подключаем…")
     db = SessionLocal()
     try:
         emp = employee_by_invite(db, token)
@@ -253,7 +262,7 @@ async def _start_shift(db: Session, user_id: int, emp: Employee, checkin: str) -
 @dp.message_callback(F.callback.payload == "start_shift")
 async def callback_start_shift(callback: MessageCallback):
     user_id = callback.callback.user.user_id
-    await callback.ack()
+    await _ack(callback, "Открываем смену…")
     db = SessionLocal()
     try:
         emp = employee_of(db, user_id)
@@ -288,7 +297,7 @@ async def _handle_checkin(user_id: int, scanned: str) -> None:
 async def callback_end_shift(callback: MessageCallback):
     user_id = callback.callback.user.user_id
     force = callback.callback.payload == "end_shift_force"
-    await callback.ack()
+    await _ack(callback, "Секунду…")
     db = SessionLocal()
     try:
         emp = employee_of(db, user_id)
@@ -329,16 +338,16 @@ async def callback_accept(callback: MessageCallback):
     try:
         defect, fac = _owned_defect(db, user_id, defect_id)
         if not defect:
-            await callback.ack(notification="Нарушение не найдено")
+            await _ack(callback, "Нарушение не найдено")
             return
         if defect.status == "accepted":
-            await callback.ack(notification="Уже принято")
+            await _ack(callback, "Уже принято")
             return
         if defect.status != "fixed":
-            await callback.ack(notification="Исправление ещё не прислали")
+            await _ack(callback, "Исправление ещё не прислали")
             return
         audit.accept_defect(db, defect)
-        await callback.ack(notification="Принято ✓")
+        await _ack(callback, "Принято ✓")
         summary = audit.summary(db, fac)
         await notifier.send_fix_accepted(defect.fixed_by, defect)
         await _reply(user_id, f"✅ Принято: {defect.title}\nГотовность к проверке: {summary['index']}%")
@@ -354,9 +363,9 @@ async def callback_return(callback: MessageCallback):
     try:
         defect, _ = _owned_defect(db, user_id, defect_id)
         if not defect or defect.status != "fixed":
-            await callback.ack(notification="Это исправление уже обработано")
+            await _ack(callback, "Это исправление уже обработано")
             return
-        await callback.ack()
+        await _ack(callback, "Выберите причину")
         await _reply(user_id, "Почему возвращаете?", keyboards.return_reasons(defect_id))
     finally:
         db.close()
@@ -367,17 +376,17 @@ async def callback_return_reason(callback: MessageCallback):
     user_id = callback.callback.user.user_id
     match = re.fullmatch(r"ret_(\d+)_(\w+)", callback.callback.payload or "")
     if not match or match.group(2) not in keyboards.RETURN_REASONS:
-        await callback.ack()
+        await _ack(callback, "Кнопка устарела")
         return
     defect_id, reason = int(match.group(1)), keyboards.RETURN_REASONS[match.group(2)]
     db = SessionLocal()
     try:
         defect, _ = _owned_defect(db, user_id, defect_id)
         if not defect or defect.status != "fixed":
-            await callback.ack(notification="Это исправление уже обработано")
+            await _ack(callback, "Это исправление уже обработано")
             return
         audit.return_defect(db, defect, reason)
-        await callback.ack(notification="Вернули")
+        await _ack(callback, "Вернули")
         await notifier.send_fix_returned(defect.fixed_by, defect)
         await _reply(user_id, f"↩️ Вернули на доработку: {defect.title}\nПричина: {reason}.")
     finally:

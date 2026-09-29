@@ -251,3 +251,47 @@ def test_demo_return_sends_the_fix_back_to_the_cook(client, sent):
     defect = db.get(Defect, review["id"])
     assert defect.to_owner is False and defect.assigned_position == "Повар"
     db.close()
+
+
+# ---------- Button taps are answered the way MAX accepts ----------
+
+
+def _strict_callback(user_id: int, payload: str = ""):
+    """MAX answers 400 to an empty callback answer: fail the same way."""
+    answers = []
+
+    async def ack(notification=None, **kwargs):
+        if not notification:
+            raise RuntimeError("400 proto.payload: `message` or `notification` required")
+        answers.append(notification)
+
+    cb = SimpleNamespace(callback=SimpleNamespace(user=SimpleNamespace(user_id=user_id), payload=payload), ack=ack)
+    return cb, answers
+
+
+def test_every_button_tap_gets_a_notification(client, facility, sent):
+    for handler, payload in [
+        (handlers.callback_start_shift, "start_shift"),
+        (handlers.callback_end_shift, "end_shift_force"),
+        (handlers.callback_role_owner, "role_owner"),
+    ]:
+        cb, answers = _strict_callback(OWNER, payload)
+        before = len(sent.to(OWNER))
+        run(handler(cb))
+        assert answers and all(answers), handler.__name__
+        assert len(sent.to(OWNER)) > before, f"{handler.__name__} sent nothing"
+
+    for handler in (handlers.callback_demo, handlers.callback_role_employee):
+        cb, answers = _strict_callback(4004)
+        cb.callback.user.first_name, cb.callback.user.last_name = "Гость", ""
+        run(handler(cb))
+        assert answers and sent.to(4004), handler.__name__
+
+
+def test_failed_answer_does_not_stop_the_handler(client, facility, sent):
+    async def broken_ack(**kwargs):
+        raise RuntimeError("MAX API is down")
+
+    cb = SimpleNamespace(callback=SimpleNamespace(user=SimpleNamespace(user_id=OWNER), payload="start_shift"), ack=broken_ack)
+    run(handlers.callback_start_shift(cb))
+    assert "Смена открыта" in sent.to(OWNER)[-1]["text"]
