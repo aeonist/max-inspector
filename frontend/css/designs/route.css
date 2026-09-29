@@ -119,10 +119,11 @@
 [data-design="route"] .r-stop.r-walked::before { background: var(--r-line); }
 [data-design="route"] .r-stop:last-child::before { display: none; }
 
+/* Name and words share a row; words that do not fit move under the name as a whole */
 [data-design="route"] .r-station {
   position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   column-gap: 12px;
   width: calc(100% + 44px);
@@ -136,8 +137,8 @@
   text-align: left;
   cursor: pointer;
 }
-[data-design="route"] .r-name { font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1.2; }
-[data-design="route"] .r-words { font-size: 14px; line-height: 1.3; color: var(--muted); text-align: right; }
+[data-design="route"] .r-name { min-width: 0; font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1.2; }
+[data-design="route"] .r-words { margin-left: auto; font-size: 14px; line-height: 1.3; color: var(--muted); text-align: right; }
 [data-design="route"] .r-station:active .r-name { color: var(--accent); }
 
 /* A station's mark: a dot once walked, a ring before, half a ring while it is being walked,
@@ -328,10 +329,12 @@
 [data-design="route"] .r-shift-count { margin-top: 10px; font-size: 15px; }
 [data-design="route"] .r-shift-count strong { font-family: var(--font-display); font-size: 24px; }
 /* A zone opens and closes its duties */
-[data-design="route"] .r-zone { grid-template-columns: auto minmax(0, 1fr) 12px; }
+[data-design="route"] .r-zone { padding-right: 24px; }
 [data-design="route"] .r-zone::after {
   content: "";
-  align-self: center;
+  position: absolute;
+  right: 4px;
+  top: 19px;
   width: 7px;
   height: 7px;
   border-right: 2px solid var(--muted);

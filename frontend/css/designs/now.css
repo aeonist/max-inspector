@@ -1,5 +1,6 @@
-/* Design «Сейчас»: one thing at a time, in big words, in signal yellow like a kitchen safety sign.
-   The next step sits alone on a yellow card with one big button; everything else waits below.
+/* Design «Сейчас»: one thing at a time, in signal yellow like a kitchen safety sign.
+   The next step sits alone on the yellow card with one big button; the other steps wait below it in
+   a numbered list. Yellow marks only that card, so it stays the one thing to look at in both themes.
    Applies only with <html data-design="now">. */
 
 @font-face { font-family: "Geologica"; font-weight: 100 900; font-display: swap; src: url("../../fonts/geologica-cyrillic-wght-normal.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
@@ -38,21 +39,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root[data-design="now"] {
-    --bg: #0e1012;
-    --card: #191c1f;
-    --text: #f1f2f4;
-    --muted: #9aa0a7;
-    --line: #2a2e33;
-    --accent: #ffd60a;
-    --accent-press: #ffe45c;
-    --accent-soft: #2b2708;
-    --green: #3fcf8e;
-    --green-soft: #13261d;
-    --amber: #ffd60a;
-    --amber-soft: #2b2708;
-    --red: #ff6f61;
-    --red-soft: #33191a;
-    --gray-soft: #23272b;
+    --bg: #1b1e22;
+    --card: #262a2f;
+    --text: #eef0f2;
+    --muted: #a3a9b0;
+    --line: #373c42;
+    --accent: #eef0f2;
+    --accent-press: #ffffff;
+    --accent-soft: #30353b;
+    --green: #4cc896;
+    --green-soft: #1d3029;
+    --amber: #e8b62c;
+    --amber-soft: #352d14;
+    --red: #ff7a6e;
+    --red-soft: #3a2224;
+    --gray-soft: #30353b;
     --overlay: rgba(0, 0, 0, 0.65);
     --on-accent: #16181b;
     --toast-bg: #f1f2f4;
@@ -69,18 +70,18 @@
 [data-design="now"] h3 { font-family: var(--font-display); letter-spacing: -0.01em; }
 [data-design="now"] h1 { font-size: 20px; font-weight: 700; }
 [data-design="now"] .section { margin: 28px 0 12px; }
-[data-design="now"] .section > h2 { display: block; font-size: 22px; font-weight: 700; border-bottom: 0; padding-bottom: 2px; }
+[data-design="now"] .section > h2 { display: block; font-size: 19px; font-weight: 650; border-bottom: 0; padding-bottom: 2px; }
 [data-design="now"] .section > h2 .count { margin-left: 4px; }
-[data-design="now"] .count { font-size: 17px; font-weight: 600; color: var(--muted); }
+[data-design="now"] .count { font-size: 16px; font-weight: 500; color: var(--muted); white-space: nowrap; }
 
 [data-design="now"] .topbar { background: var(--bg); border-bottom: 0; }
 [data-design="now"] .topbar-back { border-radius: 12px; }
-[data-design="now"] .topbar-action { font-size: 16px; font-weight: 700; color: var(--text); }
-[data-design="now"] .saved { font-size: 14px; font-weight: 700; color: var(--green); }
+[data-design="now"] .topbar-action { font-size: 16px; font-weight: 600; color: var(--text); }
+[data-design="now"] .saved { font-size: 14px; font-weight: 600; color: var(--green); }
 
 [data-design="now"] .card { border: 0; border-radius: 20px; }
 [data-design="now"] .notice { border-radius: 16px; }
-[data-design="now"] .btn { min-height: 54px; border-radius: 16px; font-size: 17px; font-weight: 700; }
+[data-design="now"] .btn { min-height: 54px; border-radius: 14px; font-size: 17px; font-weight: 650; }
 [data-design="now"] .btn-secondary { border-width: 2px; }
 [data-design="now"] .btn-link,
 [data-design="now"] .link-toggle,
@@ -88,7 +89,6 @@
 [data-design="now"] .link-toggle { text-decoration: none; }
 [data-design="now"] .chip { border-radius: 999px; }
 [data-design="now"] .chip.selected { background: var(--text); border-color: var(--text); color: var(--bg); }
-[data-design="now"] .tile { border: 0; border-radius: 20px; font-size: 15px; }
 
 [data-design="now"] .role-tabs { border: 0; background: var(--gray-soft); border-radius: 999px; padding: 4px; margin: 10px 0 4px; }
 [data-design="now"] .role-tabs button { min-height: 42px; border-radius: 999px; font-size: 15px; }
@@ -98,33 +98,26 @@
 /* ---------- The one thing ---------- */
 
 [data-design="now"] .n-head { margin: 18px 0 14px; }
-[data-design="now"] .n-headline { font-size: 34px; font-weight: 750; line-height: 1.05; letter-spacing: -0.02em; margin: 0 0 8px; text-transform: none; }
+[data-design="now"] .n-headline { font-size: 32px; font-weight: 720; line-height: 1.08; letter-spacing: -0.02em; margin: 0 0 8px; text-transform: none; text-wrap: balance; }
 [data-design="now"] .n-sub { font-size: 15px; color: var(--muted); }
 [data-design="now"] .n-head .n-sub + .n-headline { margin-top: 4px; }
 
 [data-design="now"] .n-now { margin: 0 0 8px; }
-[data-design="now"] .n-now-label {
-  display: inline-block;
-  padding: 7px 16px 5px;
-  border-radius: 14px 14px 0 0;
-  background: var(--signal);
-  color: var(--on-signal);
-  font-size: 15px;
-  font-weight: 750;
-}
 [data-design="now"] .n-card {
   padding: 16px 18px 18px;
-  border-radius: 0 24px 24px 24px;
+  border-radius: 20px;
   background: var(--signal);
   color: var(--on-signal);
 }
-[data-design="now"] .n-title { font-size: 27px; font-weight: 750; line-height: 1.1; margin: 0 0 8px; }
+[data-design="now"] .n-step-no { font-size: 14px; font-weight: 600; color: rgba(22, 24, 27, 0.7); margin: 0 0 4px; }
+[data-design="now"] .n-title { font-size: 24px; font-weight: 680; line-height: 1.15; margin: 0 0 8px; text-wrap: balance; }
+[data-design="now"] .n-task-title { font-size: 21px; font-weight: 620; line-height: 1.25; }
 [data-design="now"] .n-what { font-size: 17px; font-weight: 500; line-height: 1.4; }
 [data-design="now"] .n-how { font-size: 16px; margin: 10px 0 0; }
 [data-design="now"] .n-by { font-size: 14px; margin-top: 8px; }
 [data-design="now"] .n-returned { font-weight: 700; color: #a31d12; margin-bottom: 6px; }
 [data-design="now"] .n-actions { display: grid; gap: 10px; margin-top: 16px; }
-[data-design="now"] .n-actions .btn { min-height: 60px; font-size: 18px; }
+[data-design="now"] .n-actions .btn { min-height: 58px; font-size: 18px; }
 [data-design="now"] .n-card .btn-primary { background: var(--on-signal); border-color: var(--on-signal); color: #ffffff; }
 [data-design="now"] .n-card .btn-primary.is-busy::after { border-color: #ffffff transparent #ffffff transparent; }
 [data-design="now"] .n-card .btn-secondary { background: transparent; border-color: var(--on-signal); color: var(--on-signal); }
@@ -202,33 +195,64 @@
 [data-design="now"] .n-compare:focus-within { outline: 3px solid var(--on-signal); outline-offset: 2px; }
 [data-design="now"] .n-compare-note { font-size: 14px; }
 
-/* The queue: everything that is not now */
-[data-design="now"] .n-list { list-style: none; display: grid; gap: 8px; }
-[data-design="now"] .n-item {
+/* The other steps, numbered in the order they come */
+[data-design="now"] .n-steps { list-style: none; margin: 14px 0 0; padding: 0; border-radius: 16px; background: var(--card); overflow: hidden; }
+[data-design="now"] .n-steps li + li { border-top: 1px solid var(--line); }
+[data-design="now"] .n-step {
   display: grid;
-  gap: 2px;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
   width: 100%;
-  min-height: 60px;
-  padding: 12px 16px;
+  padding: 13px 16px;
   border: 0;
-  border-radius: 18px;
-  background: var(--card);
+  background: none;
   color: var(--text);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-[data-design="now"] .n-item:active { background: var(--gray-soft); }
-[data-design="now"] .n-item-kind { font-size: 14px; font-weight: 700; color: var(--muted); }
-[data-design="now"] .n-item-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  font-size: 16px;
-  line-height: 1.35;
+[data-design="now"] .n-step:active { background: var(--gray-soft); }
+[data-design="now"] .n-num {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+  font-size: 15px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
-[data-design="now"] .n-task-defect .n-item-kind { color: var(--red); }
+[data-design="now"] .n-step-wait .n-num { border-style: dashed; border-color: var(--muted); color: var(--muted); }
+[data-design="now"] .n-step-body { display: grid; gap: 2px; min-width: 0; padding-top: 3px; }
+[data-design="now"] .n-step-title { font-size: 16px; font-weight: 620; line-height: 1.3; }
+[data-design="now"] .n-step-text { font-size: 15px; line-height: 1.35; color: var(--muted); }
+
+/* Task and violation rows on the shift: the text first, the zone after it */
+[data-design="now"] .n-item-text { font-size: 16px; line-height: 1.35; }
+[data-design="now"] .n-item-zone { font-size: 14px; color: var(--muted); }
+[data-design="now"] .n-task-defect .n-item-zone { color: var(--red); }
+
+/* Documents and team as plain rows */
+[data-design="now"] .n-links { display: grid; border-radius: 16px; background: var(--card); overflow: hidden; }
+[data-design="now"] .n-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  padding: 0 16px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+[data-design="now"] .n-link + .n-link { border-top: 1px solid var(--line); }
+[data-design="now"] .n-link:active { background: var(--gray-soft); }
+[data-design="now"] .n-link .ico { width: 22px; height: 22px; color: var(--muted); }
 
 [data-design="now"] .n-meter { position: relative; height: 8px; margin: 10px 0 8px; border-radius: 4px; background: var(--gray-soft); }
 [data-design="now"] .n-meter-fill { display: block; height: 100%; border-radius: 4px; background: var(--text); }
@@ -237,7 +261,8 @@
 /* ---------- Audit: look at the photo, answer with the thumb ---------- */
 
 [data-design="now"] .n-audit { padding-top: 10px; }
-[data-design="now"] .n-progress p { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; }
+[data-design="now"] .n-progress p { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 15px; }
+[data-design="now"] .n-progress strong { font-weight: 620; white-space: nowrap; }
 [data-design="now"] .n-progress span { color: var(--muted); }
 [data-design="now"] .n-progress .n-meter { height: 6px; margin: 8px 0 14px; }
 [data-design="now"] .n-photo { margin: 0 0 14px; }
@@ -246,19 +271,21 @@
 [data-design="now"] .n-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; padding: 4px; border-radius: 999px; background: var(--gray-soft); }
 [data-design="now"] .n-switch button {
   min-height: 42px;
+  padding: 0 8px;
   border: 0;
   border-radius: 999px;
   background: none;
   color: var(--muted);
   font: inherit;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 620;
+  line-height: 1.15;
   cursor: pointer;
 }
 [data-design="now"] .n-switch .n-switch-ok.active { background: var(--green); color: var(--on-state); }
 [data-design="now"] .n-switch .n-switch-bad.active { background: var(--red); color: var(--on-state); }
-[data-design="now"] .n-switch-one { margin-top: 8px; font-size: 15px; font-weight: 700; color: var(--muted); }
-[data-design="now"] .n-question { font-family: var(--font-display); font-size: 25px; font-weight: 700; line-height: 1.2; margin: 0 0 10px; text-transform: none; letter-spacing: -0.015em; }
+[data-design="now"] .n-switch-one { margin-top: 8px; font-size: 15px; font-weight: 600; color: var(--muted); }
+[data-design="now"] .n-question { font-family: var(--font-display); font-size: 23px; font-weight: 640; line-height: 1.2; margin: 0 0 10px; text-transform: none; letter-spacing: -0.015em; }
 [data-design="now"] .n-norm { font-size: 16px; color: var(--muted); }
 [data-design="now"] .answer-note { border-radius: 14px; border-left: 0; padding: 10px 14px; font-size: 15px; }
 
@@ -272,7 +299,7 @@
   background: var(--card);
   color: var(--text);
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 650;
   line-height: 1.15;
 }
 [data-design="now"] .n-answers .n-yes { border-color: var(--green); color: var(--green); }
@@ -290,7 +317,7 @@
 [data-design="now"] .n-tasks { list-style: none; display: grid; gap: 8px; padding: 0; }
 [data-design="now"] .n-tasks[hidden] { display: none; }
 [data-design="now"] .n-task { display: flex; align-items: stretch; gap: 0; min-height: 64px; border: 0; border-radius: 18px; background: var(--card); overflow: hidden; }
-[data-design="now"] .n-task-defect { display: block; background: none; }
+[data-design="now"] .n-task-defect { box-shadow: inset 4px 0 0 var(--red); }
 [data-design="now"] .n-task-text {
   flex: 1;
   display: grid;
@@ -316,7 +343,7 @@
   background: var(--card);
   color: var(--bg);
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 650;
 }
 [data-design="now"] .task.done .n-check { background: var(--text); border-color: var(--text); color: var(--bg); }
 [data-design="now"] .task.done .n-task-text { color: var(--muted); text-decoration: none; }
@@ -330,19 +357,19 @@
 [data-design="now"] .photo-thumb,
 [data-design="now"] .example { border: 0; border-radius: 14px; }
 [data-design="now"] .photo-thumb span,
-[data-design="now"] .example span { margin: 8px; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; background: rgba(22, 24, 27, 0.82); }
+[data-design="now"] .example span { margin: 8px; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; background: rgba(22, 24, 27, 0.82); }
 [data-design="now"] .example.ok span { background: var(--green); color: var(--on-state); }
 [data-design="now"] .example.bad span { background: var(--red); color: var(--on-state); }
 [data-design="now"] .photo-count { margin: 8px; border-radius: 999px; }
 [data-design="now"] .photo-full { border: 0; border-radius: 18px; }
-[data-design="now"] .badge { font-size: 13px; font-weight: 700; }
+[data-design="now"] .badge { font-size: 13px; font-weight: 600; }
 [data-design="now"] .sheet { border: 0; border-radius: 26px 26px 0 0; }
 [data-design="now"] .sheet-handle { width: 44px; height: 5px; border-radius: 3px; }
 [data-design="now"] input[type="text"],
 [data-design="now"] select,
 [data-design="now"] textarea { border-radius: 14px; }
 [data-design="now"] .toast { border-radius: 16px; font-size: 15px; }
-[data-design="now"] .status { font-size: 15px; font-weight: 700; }
+[data-design="now"] .status { font-size: 15px; font-weight: 600; }
 [data-design="now"] .logo { border-radius: 18px; background: var(--signal); border-color: var(--signal); color: var(--on-signal); }
 [data-design="now"] .next-step,
 [data-design="now"] .todo-row { border: 0; border-radius: 18px; }

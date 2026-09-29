@@ -68,10 +68,12 @@
   // Where readiness stands, with the numbers of the rule: 90 % and nothing left unresolved
   function lead(s) {
     if (!s.started) return "Обход ещё не начат. Разделы идут в том порядке, в каком заведение обходит инспектор.";
-    if (s.ready) return `Готово к проверке: соблюдено ${s.index} %, открытых нарушений нет.`;
-    const facts = [s.index < 90 ? `соблюдено ${s.index} % при нужных 90` : `соблюдено ${s.index} %`];
-    if (s.unresolved) facts.push(`не устранено ${countWords(s.unresolved, "нарушение", "нарушения", "нарушений")}`);
-    return `Не готово к проверке: ${facts.join(", ")}.`;
+    if (s.ready) return `Готово к проверке: соблюдено ${s.index}\u00a0%, открытых нарушений нет.`;
+    const index = s.index < 90 ? `соблюдено ${s.index}\u00a0%, а нужно от 90\u00a0%` : `соблюдено ${s.index}\u00a0%`;
+    const unresolved = s.unresolved
+      ? ` ${plural(s.unresolved, "Не устранено", "Не устранены", "Не устранено")} ${countWords(s.unresolved, "нарушение", "нарушения", "нарушений")}.`
+      : "";
+    return `Не готово к проверке: ${index}.${unresolved}`;
   }
 
   // ---------- Cabinet ----------
@@ -364,12 +366,13 @@
     return { duties, left, open, review, walked: !left && !open };
   }
 
+  // What a zone says next to its name: a violation first, then what is left of the duties
   function zoneWords({ duties, left, open, review }) {
     const parts = [];
-    if (open) parts.push(`${countWords(open, "нарушение", "нарушения", "нарушений")}, исправьте`);
-    if (review) parts.push("исправление у руководителя");
+    if (open) parts.push("нужно исправить");
+    else if (review) parts.push("исправление на проверке");
     if (left) parts.push(`осталось ${countWords(left, "задача", "задачи", "задач")}`);
-    else if (duties.length) parts.push("всё сделано");
+    else if (!parts.length && duties.length) parts.push("всё сделано");
     return parts.join(", ");
   }
 
