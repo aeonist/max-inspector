@@ -23,27 +23,27 @@ Screens.join = {
 function joinView(info, token) {
   if (info.error) {
     return html`<div class="empty">
-      <div class="empty-icon">🔗</div>
+      <div class="empty-icon"><i class="ico" data-i="link" aria-hidden="true"></i></div>
       <p>${info.error}</p>
       ${chatButton()}
     </div>`;
   }
   if (info.is_owner) {
     return html`<div class="empty">
-      <div class="empty-icon">🔗</div>
+      <div class="empty-icon"><i class="ico" data-i="link" aria-hidden="true"></i></div>
       <p>Это личное приглашение для сотрудника ${info.full_name}. Перешлите его ему.</p>
       <button type="button" class="btn btn-primary" data-act="goHome">В кабинет</button>
     </div>`;
   }
   if (info.other_facility) {
     return html`<div class="empty">
-      <div class="empty-icon">ℹ️</div>
+      <div class="empty-icon"><i class="ico" data-i="info" aria-hidden="true"></i></div>
       <p>Вы уже подключены к «${info.other_facility}». Чтобы перейти в «${info.facility_name}», попросите прежнего руководителя отвязать ваш аккаунт.</p>
       ${chatButton()}
     </div>`;
   }
   return html`<div class="empty">
-    <div class="empty-icon">👋</div>
+    <div class="empty-icon"><i class="ico" data-i="wave" aria-hidden="true"></i></div>
     <p class="lead">Приглашение в команду «${info.facility_name}»</p>
     <h2>Вы — ${info.full_name}, ${info.position}?</h2>
     <button type="button" class="btn btn-primary" data-act="acceptInvite" data-token="${token}">Да, это я</button>
@@ -67,7 +67,7 @@ Screens.legacyJoin = {
       screen(
         "Приглашение",
         html`<div class="empty">
-          <div class="empty-icon">🔗</div>
+          <div class="empty-icon"><i class="ico" data-i="link" aria-hidden="true"></i></div>
           <p>Эта ссылка больше не работает: теперь у каждого сотрудника личное приглашение. Попросите руководителя прислать его.</p>
           ${chatButton()}
         </div>`,
@@ -82,7 +82,7 @@ Screens.joined = {
     mount(
       "#app",
       html`<main class="screen done-screen">
-        <div class="done-icon">👋</div>
+        <div class="done-icon"><i class="ico" data-i="wave" aria-hidden="true"></i></div>
         <h1>Вы в команде!</h1>
         <p class="lead">«${res.facility_name}» · ${res.full_name}, ${res.position}</p>
         <p>Смена начинается в чате с ботом: нажмите «Начать смену» на месте. Задачи и нарушения будут приходить туда же.</p>
@@ -104,7 +104,7 @@ Screens.scan = {
       screen(
         "Подключение",
         html`<div class="empty">
-          <div class="empty-icon">📷</div>
+          <div class="empty-icon"><i class="ico" data-i="camera" aria-hidden="true"></i></div>
           <p>Попросите руководителя прислать вам личное приглашение в MAX — или отсканируйте QR с экрана его телефона.</p>
           ${Bridge.inMax
             ? html`<button type="button" class="btn btn-primary" data-act="scanInvite">Сканировать QR</button>`
@@ -185,13 +185,13 @@ function shiftView(data) {
             ? html`<button type="button" class="btn btn-primary" data-act="startShift">Начать смену</button>`
             : Bridge.inMax
               ? html`<p class="muted small">Отсканируйте QR «Начало смены» на рабочем месте.</p>
-                  <button type="button" class="btn btn-primary" data-act="scanCheckin">📷 Сканировать QR на месте</button>`
+                  <button type="button" class="btn btn-primary" data-act="scanCheckin"><i class="ico" data-i="camera" aria-hidden="true"></i> Сканировать QR на месте</button>`
               : html`<p class="muted small">Смена начинается по QR на рабочем месте: отсканируйте его в приложении MAX на телефоне или камерой телефона.</p>`}`}
     </section>
 
     ${urgent.length
       ? html`<section class="section">
-          <h2 class="urgent-title">🔴 Срочно <span class="count">${urgent.length}</span></h2>
+          <h2 class="urgent-title"><i class="ico" data-i="alert-dot" aria-hidden="true"></i> Срочно <span class="count">${urgent.length}</span></h2>
           ${urgent.map((d) => urgentCard(d))}
         </section>`
       : ""}
@@ -203,7 +203,7 @@ function shiftView(data) {
             (d) => html`<article class="card defect-card" id="defect-${d.id}">
               <h3>${d.title}</h3>
               ${photoPair(d.before_photos, "Было", d.after_photos, "Стало")}
-              <p class="muted small">⏳ Руководитель проверит фото и примет исправление</p>
+              <p class="muted small"><i class="ico" data-i="clock" aria-hidden="true"></i> Руководитель проверит фото и примет исправление</p>
             </article>`
           )}
         </section>`
@@ -229,7 +229,7 @@ function shiftView(data) {
                   (d) => html`<li class="task ${d.done ? "done" : ""}">
                     <button type="button" class="task-check" data-act="toggleTask" data-id="${d.id}" data-done="${d.done ? "1" : ""}" ${raw(shift ? "" : "disabled")}
                       aria-label="${d.done ? "Снять отметку" : "Отметить выполненной"}">${d.done ? "✓" : ""}</button>
-                    <span class="task-text">${d.question}${d.photos.length ? html` <span class="muted small">📷 ${d.photos.length}</span>` : ""}${isOwner && d.position
+                    <span class="task-text">${d.question}${d.photos.length ? html` <span class="muted small"><i class="ico" data-i="camera" aria-hidden="true"></i> ${d.photos.length}</span>` : ""}${isOwner && d.position
                       ? html`<span class="muted small block">${d.position}</span>`
                       : ""}</span>
                     <button type="button" class="icon-btn" data-act="taskMenu" data-id="${d.id}" aria-label="Подробнее">⋯</button>
@@ -241,7 +241,7 @@ function shiftView(data) {
     </section>
 
     <div class="stack">
-      <button type="button" class="btn btn-secondary" data-act="reportProblem">📣 Сообщить о проблеме</button>
+      <button type="button" class="btn btn-secondary" data-act="reportProblem"><i class="ico" data-i="megaphone" aria-hidden="true"></i> Сообщить о проблеме</button>
       ${shift ? html`<button type="button" class="btn btn-secondary" data-act="endShift">Завершить смену</button>` : ""}
       ${chatButton()}
     </div>`;
@@ -266,7 +266,7 @@ Actions.ownerRoleMenu = async (el) => {
 
 function urgentCard(d) {
   return html`<article class="card defect-card urgent" id="defect-${d.id}">
-    ${d.status === "returned" ? html`<p class="notice small">↩️ Вернули: ${d.return_reason}</p>` : ""}
+    ${d.status === "returned" ? html`<p class="notice small"><i class="ico" data-i="undo" aria-hidden="true"></i> Вернули: ${d.return_reason}</p>` : ""}
     <p class="muted small">${d.zone}</p>
     <h3>${d.title}</h3>
     ${photoPair(d.before_photos, "Как сейчас", d.reference_photo, "Как должно быть")}
@@ -362,7 +362,7 @@ Actions.taskMenu = (el) => {
             <img src="/${item.reference_photo}" alt=""><span>✓ Так правильно</span></button>`
         : ""}
       ${duty.photos.length
-        ? html`<button type="button" class="inline-link" data-act="photo" data-srcs="${JSON.stringify(duty.photos)}" data-caption="Фото выполнения">📷 Фото прикреплено: ${duty.photos.length}</button>`
+        ? html`<button type="button" class="inline-link" data-act="photo" data-srcs="${JSON.stringify(duty.photos)}" data-caption="Фото выполнения"><i class="ico" data-i="camera" aria-hidden="true"></i> Фото прикреплено: ${duty.photos.length}</button>`
         : ""}
       ${Staff.shift.shift
         ? html`<button type="button" class="btn btn-secondary" data-act="taskPhoto" data-id="${duty.id}">${photoLabel("выполнение")}</button>`
@@ -443,6 +443,6 @@ Actions.problemPhoto = async (el) => {
   const photos = await collectPhotos({ title: "Фото проблемы", confirm: "Прикрепить" });
   if (photos) {
     Staff.problemPhotos = photos;
-    el.textContent = `📷 Фото прикреплено: ${photos.length} ✓`;
+    el.innerHTML = `<i class="ico" data-i="camera" aria-hidden="true"></i> Фото прикреплено: ${Number(photos.length)} ✓`;
   }
 };

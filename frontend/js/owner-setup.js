@@ -455,12 +455,12 @@ Screens.setupDone = {
     mount(
       "#app",
       html`<main class="screen done-screen">
-        <div class="done-icon">🎉</div>
+        <div class="done-icon"><i class="ico" data-i="sparkles" aria-hidden="true"></i></div>
         <h1>Готово!</h1>
         <p class="lead">«${state.name}» настроено. Осталось два шага:</p>
         ${state.qr_checkin
           ? html`<div class="notice">
-              <p>📷 Распечатайте QR «Начало смены» и повесьте на рабочем месте — по нему сотрудники будут открывать смену.</p>
+              <p><i class="ico" data-i="camera" aria-hidden="true"></i> Распечатайте QR «Начало смены» и повесьте на рабочем месте — по нему сотрудники будут открывать смену.</p>
               <button type="button" class="btn btn-small btn-secondary" data-act="downloadCheckin">Скачать QR (PDF)</button>
             </div>`
           : ""}
