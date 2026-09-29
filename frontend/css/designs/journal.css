@@ -1,0 +1,239 @@
+/* Design «Журнал»: the café's paper logbook moved into the phone.
+   Squared notebook paper, ballpoint-blue ink, a red margin line, and statuses set as rubber stamps.
+   Loaded after style.css; applies only with <html data-design="journal">. */
+
+@font-face { font-family: "PT Sans"; font-weight: 400; font-display: swap; src: url("../../fonts/pt-sans-cyrillic-400-normal.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "PT Sans"; font-weight: 400; font-display: swap; src: url("../../fonts/pt-sans-latin-400-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "PT Sans"; font-weight: 700; font-display: swap; src: url("../../fonts/pt-sans-cyrillic-700-normal.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "PT Sans"; font-weight: 700; font-display: swap; src: url("../../fonts/pt-sans-latin-700-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "PT Serif"; font-weight: 700; font-display: swap; src: url("../../fonts/pt-serif-cyrillic-700-normal.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "PT Serif"; font-weight: 700; font-display: swap; src: url("../../fonts/pt-serif-latin-700-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+:root[data-design="journal"] {
+  --bg: #fbfcfe;
+  --card: #ffffff;
+  --text: #1c2433;
+  --muted: #5f6b80;
+  --line: #c8d5e8;
+  --grid: rgba(40, 90, 170, 0.08);
+  --margin: #e0958c;
+  --ink: #1d3f8f;
+  --accent: #1d3f8f;
+  --accent-press: #142d68;
+  --accent-soft: #e7edf8;
+  --green: #2a6a3b;
+  --green-soft: #e8f1ea;
+  --amber: #93560a;
+  --amber-soft: #f8eedd;
+  --red: #b3261e;
+  --red-soft: #fbebe9;
+  --gray-soft: #eef2f8;
+  --radius: 2px;
+  --overlay: rgba(20, 30, 55, 0.5);
+  --font-display: "PT Serif", Georgia, serif;
+  --font-mono: "PT Sans", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-design="journal"] {
+    --bg: #131a28;
+    --card: #182235;
+    --text: #e6ebf4;
+    --muted: #9aa7bd;
+    --line: #2d3c58;
+    --grid: rgba(140, 175, 235, 0.07);
+    --margin: #9c4d46;
+    --ink: #9db8ff;
+    --accent: #9db8ff;
+    --accent-press: #bccfff;
+    --accent-soft: #1f2d48;
+    --green: #8fc79b;
+    --green-soft: #1b2c26;
+    --amber: #e3b36a;
+    --amber-soft: #2c2619;
+    --red: #f09a90;
+    --red-soft: #33201f;
+    --gray-soft: #1e2940;
+    --overlay: rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* Squared paper under everything, the margin line down the left of the column */
+html[data-design="journal"],
+html[data-design="journal"] body {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+[data-design="journal"] body { font-family: "PT Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 16px; line-height: 1.45; }
+[data-design="journal"] .app {
+  background: linear-gradient(var(--margin), var(--margin)) no-repeat 6px 0 / 1px 100%;
+  padding-left: 22px;
+}
+
+[data-design="journal"] h1 { font-family: var(--font-display); font-weight: 700; letter-spacing: 0; }
+[data-design="journal"] h2 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+}
+[data-design="journal"] .section > h2 { border-bottom: 2px solid var(--ink); padding-bottom: 4px; }
+
+[data-design="journal"] .topbar {
+  background: var(--bg);
+  margin-left: -22px;
+  padding-left: 22px;
+  border-bottom: 1px solid var(--line);
+}
+[data-design="journal"] .topbar h1 { font-size: 19px; }
+[data-design="journal"] .topbar-action,
+[data-design="journal"] .saved {
+  font-family: inherit;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+[data-design="journal"] .saved::before,
+[data-design="journal"] .saved::after,
+[data-design="journal"] .count::before,
+[data-design="journal"] .count::after,
+[data-design="journal"] .badge::before,
+[data-design="journal"] .badge::after { content: none; }
+
+/* Sheets of the logbook: white, square, ruled with the same blue as the paper grid */
+[data-design="journal"] .card { border-color: var(--line); box-shadow: 3px 3px 0 var(--line); }
+[data-design="journal"] .count {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  min-width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 4px;
+}
+
+/* Rubber stamps: the readiness verdict and every badge */
+[data-design="journal"] .status {
+  font-family: "PT Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border: 2px solid currentColor;
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 3px;
+  transform: rotate(-3deg);
+  margin: 10px 0 14px;
+  opacity: 0.9;
+}
+[data-design="journal"] .status::before,
+[data-design="journal"] .status::after { content: none; }
+[data-design="journal"] .status-gray { color: var(--muted); }
+[data-design="journal"] .badge {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  padding: 1px 6px;
+  transform: rotate(-2deg);
+}
+
+/* Readiness as a round seal */
+[data-design="journal"] .ring { width: 156px; height: 156px; }
+[data-design="journal"] .ring-track { stroke: var(--line); stroke-width: 2; stroke-dasharray: 2 5; }
+[data-design="journal"] .ring-value { stroke-width: 6; }
+[data-design="journal"] .ring-text strong { font-family: var(--font-display); font-size: 42px; color: var(--ink); }
+[data-design="journal"] .ring-text span { font-family: inherit; font-size: 13px; text-transform: none; letter-spacing: 0; }
+
+/* Buttons: ink */
+[data-design="journal"] .btn { border-radius: var(--radius); font-weight: 700; font-size: 16px; }
+[data-design="journal"] .btn-primary { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+[data-design="journal"] .btn-primary:active { background: var(--accent-press); border-color: var(--accent-press); }
+[data-design="journal"] .btn-secondary { border-color: var(--ink); color: var(--ink); background: var(--card); }
+[data-design="journal"] .btn-primary.is-busy::after { border-color: var(--bg) transparent var(--bg) transparent; }
+
+/* Rows sit on ruled lines */
+[data-design="journal"] .list-row,
+[data-design="journal"] .person,
+[data-design="journal"] .task,
+[data-design="journal"] .row-button { border-bottom-color: var(--line); }
+[data-design="journal"] .todo-title,
+[data-design="journal"] h3.zone {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+[data-design="journal"] h3.zone { border-bottom: 1px solid var(--ink); }
+[data-design="journal"] .todo-row { border-width: 0 0 1px; border-radius: 0; background: transparent; padding-left: 0; margin-top: 0; }
+[data-design="journal"] .todo-icon { color: var(--ink); }
+
+/* Ticks are written in ink, like in the paper journal */
+[data-design="journal"] .task-check { border: 1.5px solid var(--ink); border-radius: 0; background: var(--card); color: var(--ink); font-size: 20px; }
+[data-design="journal"] .task.done .task-check { background: var(--card); border-color: var(--ink); color: var(--ink); }
+
+[data-design="journal"] .bar { height: 6px; background: var(--gray-soft); border: 1px solid var(--line); }
+[data-design="journal"] .bar-fill { background: var(--ink); }
+
+[data-design="journal"] .role-tabs { border: 0; border-bottom: 1px solid var(--line); }
+[data-design="journal"] .role-tabs button { font-size: 15px; }
+[data-design="journal"] .role-tabs button + button { border-left: 0; }
+[data-design="journal"] .role-tabs button.active { background: none; color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink); }
+
+[data-design="journal"] .tile { box-shadow: 3px 3px 0 var(--line); }
+[data-design="journal"] .tile-icon { color: var(--ink); }
+
+[data-design="journal"] .chip { border-radius: 2px; }
+[data-design="journal"] .chip.selected { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+
+/* Photos pinned into the journal with a paper caption */
+[data-design="journal"] .photo-thumb,
+[data-design="journal"] .example { border: 4px solid var(--card); outline: 1px solid var(--line); border-radius: 0; }
+[data-design="journal"] .photo-thumb span,
+[data-design="journal"] .example span {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+  background: var(--card);
+  padding: 2px 8px 0 0;
+}
+[data-design="journal"] .example.ok span { background: var(--card); color: var(--green); }
+[data-design="journal"] .example.bad span { background: var(--card); color: var(--red); }
+
+/* Audit */
+[data-design="journal"] .question-card .question { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+[data-design="journal"] .answer { border-radius: var(--radius); font-size: 26px; }
+[data-design="journal"] .answer span { font-family: inherit; font-size: 13px; font-weight: 700; text-transform: none; letter-spacing: 0; }
+[data-design="journal"] .answer.active { border-width: 2px; }
+[data-design="journal"] .answer-bar { background: linear-gradient(to bottom, transparent, var(--bg) 25%); }
+[data-design="journal"] .answer-note { border-left-width: 3px; font-size: 14px; }
+
+[data-design="journal"] .defect-card.urgent { border-color: var(--red); box-shadow: 3px 3px 0 var(--red-soft); }
+[data-design="journal"] .notice { border-style: dashed; }
+
+[data-design="journal"] .sheet { border-radius: 0; background: var(--card); }
+[data-design="journal"] .sheet-handle { background: var(--ink); opacity: 0.4; }
+[data-design="journal"] .logo { background: var(--ink); border-color: var(--ink); font-family: var(--font-display); }
+[data-design="journal"] .next-num { border-color: var(--ink); color: var(--ink); border-radius: 50%; font-family: var(--font-display); }
+[data-design="journal"] .field > span { text-transform: none; letter-spacing: 0; font-size: 14px; }
+[data-design="journal"] .link-toggle::after { content: " ›"; }
+[data-design="journal"] .link-toggle.open::after { content: " ⌄"; }

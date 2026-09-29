@@ -1,0 +1,198 @@
+/* Design «Родной MAX»: the mini-app looks like a part of the messenger it lives in.
+   System font, grouped lists on a soft grey ground, a segmented role switch, round ticks,
+   no borders and no shadows. Nothing to download: fonts are the phone's own.
+   Loaded after style.css; applies only with <html data-design="native">. */
+
+:root[data-design="native"] {
+  --bg: #f1f2f5;
+  --card: #ffffff;
+  --text: #1a1c21;
+  --muted: #6e7580;
+  --line: #e2e4e9;
+  --accent: #2767f2;
+  --accent-press: #1d52c7;
+  --accent-soft: #e6eeff;
+  --green: #1c9a57;
+  --green-soft: #e3f5ea;
+  --amber: #c77a00;
+  --amber-soft: #fdf1dc;
+  --red: #e0433b;
+  --red-soft: #fde8e6;
+  --gray-soft: #e9ebef;
+  --radius: 14px;
+  --overlay: rgba(10, 14, 22, 0.42);
+  --font-sys: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-sys);
+  --font-mono: var(--font-sys);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-design="native"] {
+    --bg: #16181c;
+    --card: #212429;
+    --text: #eef0f3;
+    --muted: #9aa1ab;
+    --line: #30343a;
+    --accent: #5b8cff;
+    --accent-press: #7ea4ff;
+    --accent-soft: #1d2740;
+    --green: #3ec27b;
+    --green-soft: #183024;
+    --amber: #f2a93b;
+    --amber-soft: #33291a;
+    --red: #ff6a61;
+    --red-soft: #3a1f1e;
+    --gray-soft: #2a2e34;
+    --overlay: rgba(0, 0, 0, 0.6);
+  }
+}
+
+[data-design="native"] body { font-family: var(--font-sys); font-size: 16px; letter-spacing: -0.005em; }
+
+[data-design="native"] h1 { font-family: var(--font-sys); font-weight: 700; letter-spacing: -0.02em; }
+[data-design="native"] h2 {
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: -0.015em;
+}
+[data-design="native"] .section > h2 { border-bottom: 0; padding: 0 4px; }
+[data-design="native"] h3 { font-weight: 600; }
+
+[data-design="native"] .topbar { border-bottom: 0; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+[data-design="native"] .topbar h1 { font-size: 17px; font-weight: 600; text-align: center; }
+[data-design="native"] .topbar-back { border: 0; background: none; color: var(--accent); font-size: 30px; }
+[data-design="native"] .topbar-action,
+[data-design="native"] .saved { font-family: inherit; text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 500; }
+[data-design="native"] .topbar .icon-btn { color: var(--accent); }
+
+[data-design="native"] .saved::before,
+[data-design="native"] .saved::after,
+[data-design="native"] .count::before,
+[data-design="native"] .count::after,
+[data-design="native"] .badge::before,
+[data-design="native"] .badge::after { content: none; }
+
+[data-design="native"] .card { border: 0; border-radius: var(--radius); }
+[data-design="native"] .count { font-family: inherit; font-size: 20px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+[data-design="native"] .notice { border: 0; background: var(--amber-soft); border-radius: 12px; }
+
+/* Status: a coloured dot and plain words */
+[data-design="native"] .status {
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+[data-design="native"] .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+[data-design="native"] .status::after { content: none; }
+
+[data-design="native"] .badge {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  background: var(--gray-soft);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+[data-design="native"] .badge-ok { background: var(--green-soft); color: var(--green); }
+
+[data-design="native"] .ring-track { stroke: var(--gray-soft); stroke-width: 10; }
+[data-design="native"] .ring-value { stroke-width: 10; stroke-linecap: round; }
+[data-design="native"] .ring-text strong { font-family: inherit; font-size: 38px; font-weight: 700; letter-spacing: -0.03em; }
+[data-design="native"] .ring-text span { font-family: inherit; font-size: 13px; text-transform: none; letter-spacing: 0; }
+
+[data-design="native"] .btn { border-radius: 12px; font-weight: 600; font-size: 16px; min-height: 50px; }
+[data-design="native"] .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+[data-design="native"] .btn-secondary { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+[data-design="native"] .btn-danger { background: var(--red-soft); border-color: transparent; }
+[data-design="native"] .btn-primary.is-busy::after { border-color: #fff transparent #fff transparent; }
+[data-design="native"] .btn-link, [data-design="native"] .link-toggle, [data-design="native"] .inline-link { font-weight: 500; }
+[data-design="native"] .link-toggle::after { content: " ›"; }
+[data-design="native"] .link-toggle.open::after { content: " ⌄"; }
+
+/* Grouped lists: separators start after the leading inset, like the messenger's own settings */
+[data-design="native"] .card.list,
+[data-design="native"] .task-list { padding: 0 0 0 16px; }
+[data-design="native"] .list-row,
+[data-design="native"] .person,
+[data-design="native"] .task,
+[data-design="native"] .row-button { border-bottom-color: var(--line); padding-right: 16px; }
+
+[data-design="native"] .todo-title,
+[data-design="native"] h3.zone {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+[data-design="native"] h3.zone { border-bottom: 0; padding: 0 4px; margin: 18px 0 6px; }
+[data-design="native"] .todo-row { border: 0; border-radius: 12px; background: var(--bg); min-height: 48px; font-size: 15px; }
+[data-design="native"] .todo-icon { color: var(--accent); }
+
+/* Segmented control for the role switch */
+[data-design="native"] .role-tabs { border: 0; background: var(--gray-soft); border-radius: 10px; padding: 3px; }
+[data-design="native"] .role-tabs button { border-radius: 8px; min-height: 36px; font-weight: 600; color: var(--text); }
+[data-design="native"] .role-tabs button + button { border-left: 0; }
+[data-design="native"] .role-tabs button.active { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+
+[data-design="native"] .tile { border: 0; font-weight: 600; font-size: 15px; }
+[data-design="native"] .tile-icon { color: var(--accent); }
+
+[data-design="native"] .chip { border: 0; background: var(--card); border-radius: 999px; font-weight: 500; }
+[data-design="native"] .chip.selected { background: var(--accent); color: #fff; }
+
+[data-design="native"] .bar { height: 6px; border-radius: 999px; background: var(--gray-soft); }
+[data-design="native"] .bar-fill { background: var(--accent); border-radius: 999px; }
+
+/* Round ticks, like reminders */
+[data-design="native"] .task-check { width: 26px; height: 26px; border: 2px solid var(--line); border-radius: 50%; font-size: 14px; }
+[data-design="native"] .task.done .task-check { background: var(--accent); border-color: var(--accent); }
+
+[data-design="native"] .photo-thumb,
+[data-design="native"] .example { border: 0; border-radius: 12px; }
+[data-design="native"] .photo-thumb span,
+[data-design="native"] .example span {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  left: 8px;
+  bottom: 8px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: rgba(20, 22, 28, 0.62);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+[data-design="native"] .example.ok span { background: rgba(28, 154, 87, 0.9); }
+[data-design="native"] .example.bad span { background: rgba(224, 67, 59, 0.9); }
+
+[data-design="native"] .question-card .question { font-family: inherit; font-weight: 700; font-size: 20px; letter-spacing: -0.015em; }
+[data-design="native"] .answer { border: 0; border-radius: 16px; font-size: 26px; }
+[data-design="native"] .answer span { font-family: inherit; font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+[data-design="native"] .answer.ok.active { background: var(--green); color: #fff; }
+[data-design="native"] .answer.bad.active { background: var(--red); color: #fff; }
+[data-design="native"] .answer.na.active { background: var(--muted); color: #fff; }
+[data-design="native"] .answer-note { border-left: 0; border-radius: 10px; }
+
+[data-design="native"] .defect-card.urgent { border: 0; box-shadow: inset 0 0 0 1.5px var(--red); }
+[data-design="native"] .defect-card.urgent h3 { color: var(--text); }
+[data-design="native"] .urgent-title { color: var(--red); }
+
+[data-design="native"] .sheet { border: 0; border-radius: 16px 16px 0 0; background: var(--bg); }
+[data-design="native"] .sheet-handle { width: 36px; height: 5px; border-radius: 999px; }
+[data-design="native"] .toast { border-radius: 14px; }
+[data-design="native"] .logo { background: var(--accent); border-color: var(--accent); color: #fff; border-radius: 16px; }
+[data-design="native"] .next-num { border: 0; background: var(--accent-soft); color: var(--accent); border-radius: 50%; font-family: inherit; }
+[data-design="native"] .field > span { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; }
+[data-design="native"] input[type="text"], [data-design="native"] select, [data-design="native"] textarea { border: 0; border-radius: 12px; }

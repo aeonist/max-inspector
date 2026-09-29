@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Экран для сравнения дизайнов</title>
+  <script>
+    // ?d=journal|label|native (nothing = the current design), ?s=home|audit|shift|defect
+    var params = new URLSearchParams(location.search);
+    if (params.get("d")) document.documentElement.dataset.design = params.get("d");
+  </script>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/designs/journal.css">
+  <link rel="stylesheet" href="../css/designs/label.css">
+  <link rel="stylesheet" href="../css/designs/native.css">
+  <style>
+    /* A still frame: no sticky parts escaping the phone, no scrollbar */
+    html { scrollbar-width: none; }
+    html::-webkit-scrollbar { display: none; }
+    .sheet-overlay { position: fixed; }
+  </style>
+</head>
+<body class="has-back">
+  <div id="app" class="app"></div>
+  <div id="sheet-root"></div>
+  <script src="screens.js"></script>
+</body>
+</html>
