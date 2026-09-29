@@ -159,6 +159,11 @@ async def callback_role_owner(callback: MessageCallback):
     try:
         fac = create_facility(db, user_id)
         setup_done = fac.setup_done
+    except ValueError as e:
+        await callback.ack()
+        await _reply(user_id, str(e))
+        await _send_home(user_id)
+        return
     finally:
         db.close()
     await callback.ack()

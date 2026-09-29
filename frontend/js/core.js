@@ -375,13 +375,27 @@ function pickFiles(source = "camera") {
 }
 
 const MAX_PHOTOS = 10;
+// What the server accepts; files with an unknown type are left for the server to check
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+// Drop files that are not photos right when they are picked, and say which ones
+function acceptedPhotos(files) {
+  const bad = files.filter((file) => file.type && !PHOTO_TYPES.includes(file.type));
+  if (bad.length) {
+    const names = bad.map((file) => `«${file.name}»`).join(", ");
+    toast(`${names}: это не фото. Подойдёт JPG, PNG или WEBP`, { type: "error", duration: 5000 });
+  }
+  return files.filter((file) => !bad.includes(file));
+}
 
 // Photos for one answer: the camera first, then a sheet to shoot more, add from the gallery or remove.
 // Resolves with uploaded URLs, or null when cancelled. Must start inside a click handler.
 async function collectPhotos({ title, note = "", confirm = "Готово" }) {
-  const first = await pickFiles("camera");
-  if (!first.length) return null;
+  const picked = await pickFiles("camera");
+  if (!picked.length) return null;
   clearToasts();
+  const first = acceptedPhotos(picked);
+  if (!first.length) return null;
   return new Promise((resolve) => {
     const shots = [];
     const overlay = document.createElement("div");
@@ -442,7 +456,7 @@ async function collectPhotos({ title, note = "", confirm = "Готово" }) {
         URL.revokeObjectURL(shot.preview);
         render();
       } else if (act === "camera" || act === "gallery") {
-        add(await pickFiles(act));
+        add(acceptedPhotos(await pickFiles(act)));
       } else if (act === "cancel") {
         finish(null);
       } else if (act === "done") {
@@ -458,8 +472,12 @@ async function collectPhotos({ title, note = "", confirm = "Готово" }) {
   });
 }
 
+// "исправление" → "Сфотографировать исправление" on phones, "Прикрепить фото исправления" on desktop
+const PHOTO_OF = { исправление: "исправления", результат: "результата", выполнение: "выполнения" };
+
 function photoLabel(action) {
-  return Bridge.isMobile ? `📷 Сфотографировать ${action}` : `📎 Прикрепить фото ${action}`;
+  if (Bridge.isMobile) return `📷 Сфотографировать ${action}`.trim();
+  return `📎 Прикрепить фото ${PHOTO_OF[action] || action}`.trim();
 }
 
 // ---------- Router ----------
@@ -502,10 +520,19 @@ const Router = {
     const entry = this.current;
     const canGoBack = this.stack.length > 1;
     Bridge.backButton(canGoBack, () => this.back());
-    document.body.classList.toggle("has-back", canGoBack && !Bridge.inMax);
+    document.body.classList.toggle("has-back", canGoBack && !(Bridge.inMax && Bridge.isMobile));
     document.dispatchEvent(new Event("sheet:close"));
     const scroll = window.scrollY;
-    await Screens[entry.name].render(entry.params);
+    try {
+      await Screens[entry.name].render(entry.params);
+    } catch (e) {
+      if (this.refreshing) {
+        toastError(e, () => this.refresh());
+        return;
+      }
+      if (!(e instanceof ApiError)) console.error(e);
+      mount("#app", screen("", errorState(e, () => this.render()), { back: canGoBack }));
+    }
     window.scrollTo(0, keepScroll ? scroll : 0);
   },
 };
@@ -558,7 +585,8 @@ Actions.roleShift = async (el) => {
     await Router.go("shift", {}, { reset: true });
     return;
   }
-  const state = App.ownerState || (await api("GET", "/api/owner/state"));
+  const state = App.ownerState || (await busy(el, () => api("GET", "/api/owner/state")));
+  if (!state) return;
   const name = state.owner_name || Bridge.userName || App.me.user.name || "";
   const choice = await sheet(
     html`<h3>Работаю на смене</h3>

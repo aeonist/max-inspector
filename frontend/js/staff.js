@@ -8,7 +8,12 @@ Screens.join = {
   async render({ token }) {
     await loadScreen(
       "Приглашение",
-      () => api("GET", `/api/invite/${encodeURIComponent(token)}`),
+      // A used or unknown invite is an answer, not a network error: no "Повторить" that never works
+      () =>
+        api("GET", `/api/invite/${encodeURIComponent(token)}`).catch((e) => {
+          if (e instanceof ApiError && e.status === 404) return { error: e.message };
+          throw e;
+        }),
       (info) => joinView(info, token),
       { back: Router.stack.length > 1 }
     );
@@ -16,6 +21,13 @@ Screens.join = {
 };
 
 function joinView(info, token) {
+  if (info.error) {
+    return html`<div class="empty">
+      <div class="empty-icon">🔗</div>
+      <p>${info.error}</p>
+      ${chatButton()}
+    </div>`;
+  }
   if (info.is_owner) {
     return html`<div class="empty">
       <div class="empty-icon">🔗</div>
@@ -27,6 +39,7 @@ function joinView(info, token) {
     return html`<div class="empty">
       <div class="empty-icon">ℹ️</div>
       <p>Вы уже подключены к «${info.other_facility}». Чтобы перейти в «${info.facility_name}», попросите прежнего руководителя отвязать ваш аккаунт.</p>
+      ${chatButton()}
     </div>`;
   }
   return html`<div class="empty">
@@ -311,7 +324,8 @@ Actions.toggleTask = (el) => {
     attachTaskPhoto(duty.id);
     return;
   }
-  // Optimistic update; rolled back by the refresh on error
+  // Optimistic update; rolled back by the refresh on error. Unticking drops the task's photos on the server too
+  if (!done && duty) duty.photos = [];
   el.closest(".task").classList.toggle("done", done);
   el.textContent = done ? "✓" : "";
   el.dataset.done = done ? "1" : "";

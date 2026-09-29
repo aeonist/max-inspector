@@ -52,7 +52,10 @@ def get_me(user: CurrentUser = Depends(current_user), db: Session = Depends(get_
 # Owner starts from the mini-app instead of the chat button
 @router.post("/facility")
 def create_my_facility(user: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
-    facility = create_facility(db, user.user_id)
+    try:
+        facility = create_facility(db, user.user_id)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     return {"name": facility.name, "setup_done": bool(facility.setup_done)}
 
 

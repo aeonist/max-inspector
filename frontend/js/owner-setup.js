@@ -200,8 +200,11 @@ Actions.togglePosition = (el) => {
   const d = Setup.draft;
   const p = el.dataset.value;
   if (d.positions.includes(p)) {
-    const used = [...d.existing_staff, ...d.new_staff].some((s) => s.position === p);
-    if (used) {
+    if (d.new_staff.some((s) => s.position === p)) {
+      toast(`В команде есть «${p}». Сначала уберите его из команды`, { type: "error" });
+      return;
+    }
+    if (d.existing_staff.some((s) => s.position === p)) {
       toast(`В команде есть «${p}». Сначала поменяйте ему должность в настройках`, { type: "error" });
       return;
     }
@@ -225,6 +228,7 @@ Actions.addPosition = async () => {
       { label: "Отмена", value: null },
     ]
   );
+  if (value === "") toast("Введите название должности", { type: "error" });
   if (value) {
     const d = Setup.draft;
     if (!d.positions.includes(value)) d.positions.push(value);
@@ -249,6 +253,14 @@ Actions.addNewStaff = () => {
   Setup.draft.new_staff.push({ full_name: name, position: chipEl ? chipEl.dataset.value : Setup.draft.positions[0] });
   Router.refresh().then(() => document.getElementById("fStaffName").focus());
 };
+
+// Enter in the name field adds the person, as on a desktop form
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.id === "fStaffName") {
+    e.preventDefault();
+    Actions.addNewStaff();
+  }
+});
 
 Actions.removeNewStaff = (el) => {
   readStep2();
@@ -408,6 +420,7 @@ Actions.addCustomDuty = async () => {
       { label: "Отмена", value: null },
     ]
   );
+  if (value && !value.question) toast("Опишите задачу", { type: "error" });
   if (value && value.question) {
     d.custom_duties.push(value);
     Router.refresh();
@@ -457,7 +470,7 @@ Screens.setupDone = {
         </button>
         <button type="button" class="next-step" data-act="goAudit">
           <span class="next-num">2</span>
-          <span><strong>Пройдите внутренний аудит</strong><span class="muted">${Checklist.items.length} вопросов инспектора, около 20 минут, можно по частям</span></span>
+          <span><strong>Пройдите внутренний аудит</strong><span class="muted">${Checklist.items.length} ${plural(Checklist.items.length, "вопрос", "вопроса", "вопросов")} инспектора, около 20 минут, можно по частям</span></span>
         </button>
         <button type="button" class="btn btn-link" data-act="goHome">В кабинет</button>
       </main>`

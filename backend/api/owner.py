@@ -19,12 +19,12 @@ from services.auth import CurrentUser, current_user, make_file_token
 from services.facility import (
     active_staff,
     add_employee,
-    archive_employee,
     detach_facility,
     ensure_employee_invite,
     facility_state,
     invite_link,
     reissue_checkin_token,
+    remove_employee,
     save_setup,
     set_owner_works_shift,
     staff_to_dict,
@@ -168,8 +168,7 @@ def delete_staff(employee_id: int, facility: Facility = Depends(get_owner_facili
     emp = _staff_member(db, facility, employee_id)
     if emp.is_owner:
         raise HTTPException(status_code=400, detail="Это вы. Снимите отметку «Я тоже работаю на смене» в настройках")
-    archive_employee(db, emp)
-    db.commit()
+    remove_employee(db, facility, emp)
     return {"status": "ok"}
 
 
