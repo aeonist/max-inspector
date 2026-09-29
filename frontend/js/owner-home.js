@@ -96,7 +96,7 @@ function readinessTodo(s, review, mine, team) {
 
   if (!rows.length) return html`<p class="muted small">Аудит пройден, нарушений нет. Соблюдается ${s.compliant} из ${s.applicable}.</p>`;
   return html`<div class="todo">
-    <p class="todo-title">Что сделать для готовности:</p>
+    <p class="todo-title">${s.ready ? "Можно ещё:" : "Что сделать для готовности:"}</p>
     ${rows.map(
       (r) => html`<button type="button" class="todo-row" data-act="${r.act || "scrollToSection"}" data-target="${r.target || ""}">
         <span class="todo-icon">${r.icon}</span><span class="todo-text">${r.text}</span><span class="chevron">›</span>
@@ -334,7 +334,15 @@ Actions.copyInvite = async () => {
 Actions.inviteAll = (el) =>
   busy(el, async () => {
     const res = await api("POST", "/api/owner/invites/send");
-    toast(`В чат с ботом пришло приглашений: ${res.sent}. Перешлите каждое сотруднику`, {
+    if (!res.sent) {
+      toast("Бот не смог отправить приглашения в чат. Нажмите «Пригласить» у сотрудника и скопируйте ссылку", {
+        type: "error",
+        duration: 6000,
+      });
+      return;
+    }
+    const partly = res.sent < res.total ? ` из ${res.total}` : "";
+    toast(`В чат с ботом пришло приглашений: ${res.sent}${partly}. Перешлите каждое сотруднику`, {
       type: "success",
       duration: 6000,
       action: { label: "Открыть чат", fn: () => Bridge.close() },

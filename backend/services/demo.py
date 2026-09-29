@@ -89,6 +89,8 @@ def create_demo_facility(db: Session, owner_user_id: int, owner_name: str) -> Fa
     # The cook Maria has already sent her fix: before/after waits in "Ждут вашей проверки"
     _, defect, _ = audit.set_answer(db, facility, DEMO_FIX, "violation", [_library_photo(DEMO_FIX, "bad")], "Повар")
     cook = db.query(Employee).filter(Employee.facility_id == facility.id, Employee.full_name == "Мария Петрова").one()
+    # Like the other demo violations it stays the cook's: "Вернуть" sends it back to her position
+    defect.to_owner = False
     defect.status = "fixed"
     defect.after_photos = [_library_photo(DEMO_FIX, "good")]
     defect.fixed_by_employee_id = cook.id

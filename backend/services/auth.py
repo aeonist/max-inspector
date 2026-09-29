@@ -50,7 +50,7 @@ def validate_init_data(raw: str, bot_token: str = BOT_TOKEN, now: float | None =
     check_string = "\n".join(f"{k}={params[k]}" for k in sorted(params))
     secret_key = _hmac(b"WebAppData", bot_token.encode())
     expected = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expected, received_hash.lower()):
+    if not hmac.compare_digest(expected.encode(), received_hash.lower().encode()):
         return None
 
     auth_date = params.get("auth_date")

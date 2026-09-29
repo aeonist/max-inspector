@@ -328,7 +328,9 @@ async function chooseAssignee(item) {
     { label: "Отмена", value: null },
   ]);
   if (!picked || picked === "owner") return picked;
-  return Audit.linkedOn(picked).length ? picked : "owner";
+  if (Audit.linkedOn(picked).length) return picked;
+  toast(`На должности «${picked}» пока никого нет в MAX — задача будет у вас`, { type: "info", duration: 4000 });
+  return "owner";
 }
 
 // Audit results: index, violations and the act
@@ -366,7 +368,7 @@ function auditSummaryView(state) {
           <h2>❌ ${state.defects.length} ${plural(state.defects.length, "нарушение", "нарушения", "нарушений")} в работе</h2>
           <ul class="list">
             ${toStaff ? html`<li class="list-row"><span>Отправлены ответственным</span><strong>${toStaff}</strong></li>` : ""}
-            ${toOwner ? html`<li class="list-row"><span>Ваши задачи (документы, помещения)</span><strong>${toOwner}</strong></li>` : ""}
+            ${toOwner ? html`<li class="list-row"><span>Ваши задачи</span><strong>${toOwner}</strong></li>` : ""}
           </ul>
         </section>`
       : ""}

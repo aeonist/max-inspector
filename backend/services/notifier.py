@@ -97,7 +97,8 @@ async def send_review_card(facility: Facility, defect: Defect, employee: Employe
 
 
 async def send_fix_accepted(employee: Employee, defect: Defect) -> bool:
-    if not employee or not employee.user_id:
+    # The owner who fixed it on shift already sees "Принято" as the reviewer
+    if not employee or not employee.user_id or employee.is_owner:
         return False
     return await _send(employee.user_id, f"✅ Исправление принято: {defect.title}\nСпасибо!", [])
 

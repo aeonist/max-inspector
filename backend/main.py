@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
+from maxapi.exceptions.max import InvalidToken
 
 import max_bot.handlers  # noqa: F401 - register bot handlers
 from api import api_router
@@ -16,11 +17,35 @@ from max_bot.instance import resolve_username
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Seconds between attempts to start the bot while the MAX API is unreachable
+BOT_RETRY_FIRST_DELAY = 5
+BOT_RETRY_MAX_DELAY = 300
+
 # Initialize database tables and migrate columns
 init_db()
 
 if not BOT_TOKEN:
     logger.warning("BOT_TOKEN is not set: the bot is off; API and mini-app run, sign-in works only from MAX")
+
+
+# Bot polling that survives a MAX API outage at startup: the username lookup and
+# the first get_me are retried with backoff instead of leaving the bot dead
+async def run_bot() -> None:
+    delay = BOT_RETRY_FIRST_DELAY
+    while True:
+        try:
+            await resolve_username()
+            await dp.start_polling(bot)
+            return
+        except asyncio.CancelledError:
+            raise
+        except InvalidToken:
+            logger.error("MAX Bot token is invalid: the bot is off")
+            return
+        except Exception as e:
+            logger.error(f"MAX Bot could not start, retrying in {delay} s: {e!r}")
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, BOT_RETRY_MAX_DELAY)
 
 
 # Application lifespan context
@@ -29,15 +54,8 @@ async def lifespan(app: FastAPI):
     if not BOT_POLLING:
         yield
         return
-    await resolve_username()
     logger.info("Starting MAX Bot polling...")
-    task = asyncio.create_task(dp.start_polling(bot))
-
-    def on_polling_done(t):
-        if not t.cancelled() and t.exception():
-            logger.error(f"MAX Bot polling failed: {t.exception()}", exc_info=t.exception())
-
-    task.add_done_callback(on_polling_done)
+    task = asyncio.create_task(run_bot())
     yield
     logger.info("Stopping MAX Bot polling...")
     task.cancel()

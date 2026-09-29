@@ -14,15 +14,13 @@ dp = Dispatcher()
 _username = BOT_USERNAME
 
 
-# Bot username for deep links and OpenAppButton, from env or the Bot API
+# Bot username for deep links and OpenAppButton, from env or the Bot API.
+# Raises when the Bot API is unreachable so the caller can retry
 async def resolve_username() -> str:
     global _username
     if not _username:
-        try:
-            me = await bot.get_me()
-            _username = me.username or ""
-        except Exception as e:
-            logger.error(f"Could not resolve bot username: {e}")
+        me = await bot.get_me()
+        _username = me.username or ""
     return _username
 
 

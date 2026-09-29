@@ -1,3 +1,4 @@
+import threading
 from datetime import timedelta
 
 from sqlalchemy.orm import Session
@@ -6,6 +7,10 @@ from config import SHIFT_MAX_HOURS
 from models import Defect, Employee, Shift, ShiftTask
 from services.checklist import duties_for_employee
 from utils.timefmt import utcnow
+
+# Check-then-insert of shifts and shift tasks runs under one lock: API requests run in
+# parallel threads, and a double tap must not open two shifts or insert a task twice
+_write_lock = threading.Lock()
 
 
 # Current shift of an employee; a shift forgotten open is closed after SHIFT_MAX_HOURS
@@ -25,13 +30,14 @@ def active_shift(db: Session, employee: Employee) -> Shift | None:
 
 # Open a shift ("qr" or "button"); a repeated check-in during a shift keeps its progress
 def open_shift(db: Session, employee: Employee, checkin: str) -> tuple[Shift, bool]:
-    shift = active_shift(db, employee)
-    if shift:
-        return shift, False
-    shift = Shift(employee_id=employee.id, facility_id=employee.facility_id, checkin=checkin)
-    db.add(shift)
-    db.commit()
-    return shift, True
+    with _write_lock:
+        shift = active_shift(db, employee)
+        if shift:
+            return shift, False
+        shift = Shift(employee_id=employee.id, facility_id=employee.facility_id, checkin=checkin)
+        db.add(shift)
+        db.commit()
+        return shift, True
 
 
 # Progress of a shift: done duties, all duties, violations fixed during it
@@ -65,13 +71,14 @@ def task_photos(db: Session, shift: Shift, item_id: int) -> list[str]:
 
 
 def set_task_done(db: Session, shift: Shift, item_id: int, done: bool, photos: list[str]) -> None:
-    task = db.query(ShiftTask).filter(ShiftTask.shift_id == shift.id, ShiftTask.item_id == item_id).first()
-    if done:
-        if not task:
-            task = ShiftTask(shift_id=shift.id, item_id=item_id)
-            db.add(task)
-        if photos:
-            task.photos = photos
-    elif task:
-        db.delete(task)
-    db.commit()
+    with _write_lock:
+        task = db.query(ShiftTask).filter(ShiftTask.shift_id == shift.id, ShiftTask.item_id == item_id).first()
+        if done:
+            if not task:
+                task = ShiftTask(shift_id=shift.id, item_id=item_id)
+                db.add(task)
+            if photos:
+                task.photos = photos
+        elif task:
+            db.delete(task)
+        db.commit()

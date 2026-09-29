@@ -70,7 +70,7 @@ def reissue_checkin_token(db: Session, facility: Facility) -> None:
 def checkin_code_valid(facility: Facility, scanned: str | None) -> bool:
     match = re.search(r"chk_([\w-]+)", scanned or "")
     token = match.group(1) if match else (scanned or "").strip()
-    return bool(facility.checkin_token) and hmac.compare_digest(token, facility.checkin_token)
+    return bool(facility.checkin_token) and hmac.compare_digest(token.encode(), facility.checkin_token.encode())
 
 
 # The person who opened the invite becomes this employee; the link stops working
@@ -89,6 +89,12 @@ def create_facility(db: Session, owner_user_id: int) -> Facility:
     existing = owner_facility(db, owner_user_id)
     if existing:
         return existing
+    emp = employee_of(db, owner_user_id)
+    if emp and not emp.is_owner:
+        raise ValueError(
+            f"Вы в команде «{emp.facility.name}» как сотрудник. Чтобы открыть своё заведение, "
+            "попросите руководителя убрать вас из команды"
+        )
     facility = Facility(
         code=generate_unique_facility_code(db),
         name="Моё заведение",
@@ -150,12 +156,22 @@ def set_owner_works_shift(db: Session, facility: Facility, works: bool, name: st
     db.commit()
 
 
-# "Delete and start over": the owner leaves the facility, data stays for history
+# "Delete and start over": the owner leaves the facility, data stays for history.
+# The whole team is released too, so nobody stays bound to it and unused invites stop working
 def detach_facility(db: Session, facility: Facility) -> None:
-    owner_emp = audit.owner_employee(db, facility)
-    if owner_emp:
-        archive_employee(db, owner_emp)
+    for emp in active_staff(db, facility):
+        archive_employee(db, emp)
     facility.owner_user_id = None
+    db.commit()
+
+
+# Remove a team member; open violations of a position nobody else holds go to the owner
+def remove_employee(db: Session, facility: Facility, emp: Employee) -> None:
+    archive_employee(db, emp)
+    if not any(e.position == emp.position for e in active_staff(db, facility) if e.id != emp.id):
+        for defect in audit.unresolved_defects(db, facility):
+            if not defect.to_owner and defect.assigned_position == emp.position:
+                defect.to_owner = True
     db.commit()
 
 
