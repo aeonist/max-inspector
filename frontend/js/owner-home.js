@@ -422,6 +422,8 @@ function settingsView(state) {
       </div>
     </section>
 
+    ${designPicker()}
+
     <section class="section">
       <h2>Команда</h2>
       <p class="muted small">${state.staff.length} ${plural(state.staff.length, "человек", "человека", "человек")}, в MAX: ${state.staff.filter((p) => p.linked).length}</p>
@@ -445,6 +447,23 @@ function settingsView(state) {
       </div>
     </section>`;
 }
+
+// Design variants to show the team; the choice stays on this phone only
+function designPicker() {
+  const options = [["", "Как сейчас"], ...Object.entries(Design.all).map(([key, design]) => [key, design.title])];
+  if (options.length < 2) return "";
+  return html`<section class="section design-picker">
+    <h2>Оформление</h2>
+    <p class="muted small">Варианты дизайна для показа команде. Выбор действует только на этом телефоне.</p>
+    <div class="chips">
+      ${options.map(
+        ([key, title]) => html`<button type="button" class="chip ${Design.name === key ? "selected" : ""}" data-act="chooseDesign" data-design="${key}">${title}</button>`
+      )}
+    </div>
+  </section>`;
+}
+
+Actions.chooseDesign = (el) => Design.choose(el.dataset.design);
 
 // A switch flipped in "Правила работы": save it, roll it back on error
 document.addEventListener("change", async (e) => {

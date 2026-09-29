@@ -83,6 +83,7 @@ function route(param) {
 }
 
 async function boot() {
+  Design.use(document.documentElement.dataset.design || "");
   Bridge.ready();
   Auth.init();
   document.body.classList.toggle("is-mobile", Bridge.isMobile);

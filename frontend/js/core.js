@@ -538,6 +538,53 @@ const Router = {
   },
 };
 
+// ---------- Designs: alternative looks to show the team; without one the app looks as usual ----------
+
+// <html data-design> comes from ?design= or this device's last choice (index.html).
+// A design registers its own view functions, actions and screens; use() swaps them in
+// and puts the originals back when another design is chosen, so switching needs no reload.
+const Design = {
+  name: "",
+  all: {},
+  saved: [],
+  register(name, title, parts) {
+    this.all[name] = { title, parts };
+  },
+  use(name) {
+    this.saved.forEach(([target, key, value]) => {
+      target[key] = value;
+    });
+    this.saved = [];
+    const design = this.all[name];
+    this.name = design ? name : "";
+    if (design) {
+      const { globals = {}, actions = {}, screens = {} } = design.parts;
+      [
+        [window, globals],
+        [Actions, actions],
+        [Screens, screens],
+      ].forEach(([target, parts]) => {
+        Object.entries(parts).forEach(([key, value]) => {
+          this.saved.push([target, key, target[key]]);
+          target[key] = value;
+        });
+      });
+      document.documentElement.dataset.design = name;
+    } else {
+      delete document.documentElement.dataset.design;
+    }
+  },
+  choose(name) {
+    try {
+      localStorage.setItem("design", name);
+    } catch (e) {
+      // Private mode: the choice lasts until the app is closed
+    }
+    this.use(name);
+    Router.render({ keepScroll: true });
+  },
+};
+
 // Delegated clicks: <button data-act="name" data-id="...">
 document.addEventListener("click", (e) => {
   const el = e.target.closest("[data-act]");
@@ -680,6 +727,23 @@ const SECTION_ORDER = [
   "Помещения и инженерные системы",
   "Отходы, насекомые и грызуны",
 ];
+
+// Short names of the route sections, where a whole name does not fit
+const SECTION_SHORT = {
+  "Документы и производственный контроль": "Документы",
+  "Приёмка и хранение продукции": "Приёмка",
+  "Холодильники и сроки годности": "Холодильники",
+  "Кухня и технологический процесс": "Кухня",
+  "Мытьё посуды и инвентаря": "Мойка",
+  "Раздача, зал и доставка": "Раздача и зал",
+  "Персонал и личная гигиена": "Персонал",
+  "Уборка и дезинфицирующие средства": "Уборка",
+  "Помещения и инженерные системы": "Помещения",
+  "Отходы, насекомые и грызуны": "Отходы",
+};
+
+// Zones of shift duties in the same order as the route
+const ZONE_ORDER = ["Документы", "Склад", "Холодильники", "Кухня", "Мойка", "Зал", "Персонал", "Помещения", "Отходы"];
 
 // Friendly labels for conditional checklist items ("applies_to")
 const FEATURE_LABELS = {

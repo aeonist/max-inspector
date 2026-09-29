@@ -180,13 +180,7 @@ function shiftView(data) {
       ${isOwner ? html`<button type="button" class="btn-link small" data-act="ownerRoleMenu">Выйти из роли сотрудника</button>` : ""}
       ${shift
         ? html`<p class="status status-green">Смена с ${shift.started}${shift.checkin === "qr" ? " · по QR на месте" : ""}</p>`
-        : html`<p class="status status-gray">Смена не начата</p>
-          ${!data.facility.qr_checkin
-            ? html`<button type="button" class="btn btn-primary" data-act="startShift">Начать смену</button>`
-            : Bridge.inMax
-              ? html`<p class="muted small">Отсканируйте QR «Начало смены» на рабочем месте.</p>
-                  <button type="button" class="btn btn-primary" data-act="scanCheckin"><i class="ico" data-i="camera" aria-hidden="true"></i> Сканировать QR на месте</button>`
-              : html`<p class="muted small">Смена начинается по QR на рабочем месте: отсканируйте его в приложении MAX на телефоне или камерой телефона.</p>`}`}
+        : html`<p class="status status-gray">Смена не начата</p>${shiftStart(data)}`}
     </section>
 
     ${urgent.length
@@ -228,7 +222,7 @@ function shiftView(data) {
                 ${duties.map(
                   (d) => html`<li class="task ${d.done ? "done" : ""}">
                     <button type="button" class="task-check" data-act="toggleTask" data-id="${d.id}" data-done="${d.done ? "1" : ""}" ${raw(shift ? "" : "disabled")}
-                      aria-label="${d.done ? "Снять отметку" : "Отметить выполненной"}">${d.done ? "✓" : ""}</button>
+                      aria-label="${d.done ? "Снять отметку" : "Отметить выполненной"}">${taskMark(d.done)}</button>
                     <span class="task-text">${d.question}${d.photos.length ? html` <span class="muted small"><i class="ico" data-i="camera" aria-hidden="true"></i> ${d.photos.length}</span>` : ""}${isOwner && d.position
                       ? html`<span class="muted small block">${d.position}</span>`
                       : ""}</span>
@@ -240,11 +234,30 @@ function shiftView(data) {
         : html`<p class="muted">${isOwner ? "Задач смены пока нет. Их можно добавить в настройках." : "На вашу должность задач нет. Руководитель может добавить их в настройках."}</p>`}
     </section>
 
-    <div class="stack">
-      <button type="button" class="btn btn-secondary" data-act="reportProblem"><i class="ico" data-i="megaphone" aria-hidden="true"></i> Сообщить о проблеме</button>
-      ${shift ? html`<button type="button" class="btn btn-secondary" data-act="endShift">Завершить смену</button>` : ""}
-      ${chatButton()}
-    </div>`;
+    ${shiftFooter(shift)}`;
+}
+
+// How to open the shift: a button, or the workplace QR when the owner turned it on
+function shiftStart(data) {
+  if (!data.facility.qr_checkin) return html`<button type="button" class="btn btn-primary" data-act="startShift">Начать смену</button>`;
+  if (Bridge.inMax) {
+    return html`<p class="muted small">Отсканируйте QR «Начало смены» на рабочем месте.</p>
+      <button type="button" class="btn btn-primary" data-act="scanCheckin"><i class="ico" data-i="camera" aria-hidden="true"></i> Сканировать QR на месте</button>`;
+  }
+  return html`<p class="muted small">Смена начинается по QR на рабочем месте: отсканируйте его в приложении MAX на телефоне или камерой телефона.</p>`;
+}
+
+function shiftFooter(shift) {
+  return html`<div class="stack">
+    <button type="button" class="btn btn-secondary" data-act="reportProblem"><i class="ico" data-i="megaphone" aria-hidden="true"></i> Сообщить о проблеме</button>
+    ${shift ? html`<button type="button" class="btn btn-secondary" data-act="endShift">Завершить смену</button>` : ""}
+    ${chatButton()}
+  </div>`;
+}
+
+// What the check button of a duty shows; a design may draw it differently (a signature, a big tick)
+function taskMark(done) {
+  return done ? "✓" : "";
 }
 
 // Show the duties of one zone (kitchen, storage...) or all of them
@@ -327,7 +340,7 @@ Actions.toggleTask = (el) => {
   // Optimistic update; rolled back by the refresh on error. Unticking drops the task's photos on the server too
   if (!done && duty) duty.photos = [];
   el.closest(".task").classList.toggle("done", done);
-  el.textContent = done ? "✓" : "";
+  mount(el, taskMark(done));
   el.dataset.done = done ? "1" : "";
   if (done) Bridge.haptic("light");
   api("POST", `/api/shift/tasks/${el.dataset.id}`, { done })
