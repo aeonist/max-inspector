@@ -538,11 +538,11 @@ const Router = {
   },
 };
 
-// ---------- Designs: alternative looks to show the team; without one the app looks as usual ----------
+// ---------- Designs: the app's look is «Сейчас»; the other looks stay reachable by a link ----------
 
-// <html data-design> comes from ?design= or this device's last choice (index.html).
-// A design registers its own view functions, actions and screens; use() swaps them in
-// and puts the originals back when another design is chosen, so switching needs no reload.
+// <html data-design> is "now" unless ?design= picked another look on this device (index.html).
+// A design registers its own view functions, actions and screens; use() swaps them in,
+// and an unknown name such as "base" leaves the look the app had before the designs.
 const Design = {
   name: "",
   all: {},
@@ -573,15 +573,6 @@ const Design = {
     } else {
       delete document.documentElement.dataset.design;
     }
-  },
-  choose(name) {
-    try {
-      localStorage.setItem("design", name);
-    } catch (e) {
-      // Private mode: the choice lasts until the app is closed
-    }
-    this.use(name);
-    Router.render({ keepScroll: true });
   },
 };
 
