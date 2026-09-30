@@ -134,10 +134,19 @@ const Bridge = {
     }
     window.open(absolute, "_blank");
   },
+  // MAX scanner on the phone; the web version of MAX has none, so there the browser camera reads the QR
   async scanQR() {
     if (!this.inMax) throw new Error("Сканер QR работает в приложении MAX");
-    const result = await this.app.openCodeReader(false);
-    return typeof result === "string" ? result : JSON.stringify(result || {});
+    const native = (this.platform === "ios" || this.platform === "android") && typeof this.app.openCodeReader === "function";
+    if (native) {
+      try {
+        const result = await this.app.openCodeReader(false);
+        return typeof result === "string" ? result : JSON.stringify(result || {});
+      } catch (e) {
+        console.warn("openCodeReader failed, using the browser camera:", e);
+      }
+    }
+    return webScanQR();
   },
   async shareToMax(text, link) {
     if (this.inMax && this.app.shareMaxContent) {
@@ -152,6 +161,93 @@ const Bridge = {
     else window.location.href = link;
   },
 };
+
+// ---------- QR through the browser camera (web version of MAX) ----------
+
+let jsQRLoading = null;
+function loadJsQR() {
+  if (window.jsQR) return Promise.resolve(window.jsQR);
+  if (!jsQRLoading) {
+    jsQRLoading = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js";
+      script.onload = () => resolve(window.jsQR);
+      script.onerror = () => {
+        jsQRLoading = null;
+        reject(new Error("jsQR not loaded"));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return jsQRLoading;
+}
+
+// Resolves with the QR text; throws when there is no camera; null when the person closed the window
+async function webScanQR() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("Камера недоступна");
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+  } catch (e) {
+    throw new Error("Нет доступа к камере");
+  }
+  let detector = null;
+  if ("BarcodeDetector" in window) {
+    try {
+      const formats = await window.BarcodeDetector.getSupportedFormats();
+      if (formats.includes("qr_code")) detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+    } catch (e) {}
+  }
+  const decode = detector ? null : await loadJsQR().catch(() => null);
+  if (!detector && !decode) {
+    stream.getTracks().forEach((t) => t.stop());
+    throw new Error("Сканер не загрузился");
+  }
+
+  let found = null;
+  let stopped = false;
+  const closed = sheet(
+    html`<h3>Наведите камеру на QR-код</h3>
+      <video class="qr-video" autoplay playsinline muted></video>`,
+    [{ label: "Отмена", value: null }]
+  );
+  const video = document.querySelector("#sheet-root .qr-video");
+  video.srcObject = stream;
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+  const tick = async () => {
+    if (stopped) return;
+    if (video.readyState >= 2 && video.videoWidth) {
+      try {
+        if (detector) {
+          const codes = await detector.detect(video);
+          if (codes.length) found = codes[0].rawValue;
+        } else {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0);
+          const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = decode(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+          if (code) found = code.data;
+        }
+      } catch (e) {}
+      if (found) {
+        document.dispatchEvent(new Event("sheet:close"));
+        return;
+      }
+    }
+    setTimeout(tick, 200);
+  };
+  tick();
+  await closed;
+  stopped = true;
+  stream.getTracks().forEach((t) => t.stop());
+  if (found) return found;
+  const cancelled = new Error("Сканирование отменено");
+  cancelled.cancelled = true;
+  throw cancelled;
+}
 
 // ---------- API client ----------
 
