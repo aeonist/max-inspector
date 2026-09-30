@@ -122,7 +122,8 @@ Actions.scanInvite = (el) =>
     try {
       value = await Bridge.scanQR();
     } catch (e) {
-      throw new ApiError("Не получилось отсканировать. Попробуйте ещё раз", 0);
+      if (e.cancelled) return;
+      throw new ApiError(e.message === "Нет доступа к камере" ? "Разрешите доступ к камере и попробуйте ещё раз" : "Не получилось отсканировать. Попробуйте ещё раз", 0);
     }
     const match = value.match(/inv_([\w-]+)/);
     if (!match) throw new ApiError("Это не приглашение МАХ-Инспектора. Попросите руководителя показать ваш QR", 0);
@@ -305,7 +306,8 @@ Actions.scanCheckin = (el) =>
     try {
       code = await Bridge.scanQR();
     } catch (e) {
-      throw new ApiError("Не получилось отсканировать. Попробуйте ещё раз", 0);
+      if (e.cancelled) return;
+      throw new ApiError(e.message === "Нет доступа к камере" ? "Разрешите доступ к камере и попробуйте ещё раз" : "Не получилось отсканировать. Попробуйте ещё раз", 0);
     }
     await api("POST", "/api/shift/start", { code });
     Bridge.haptic("success");
