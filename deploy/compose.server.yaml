@@ -1,0 +1,27 @@
+# Server overlay: HTTPS via Caddy, the app itself is reachable only inside Docker.
+# Paths are relative to the project root. Used by deploy/server-setup.sh:
+#   docker compose -f compose.yaml -f deploy/compose.server.yaml up -d --build
+services:
+  app:
+    # Docker bypasses the firewall for published ports, so publish nothing
+    ports: !reset []
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN is not set}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  caddy-data:
+  caddy-config:
