@@ -107,9 +107,9 @@ docker compose logs -f app   # логи
 curl -fsSL https://raw.githubusercontent.com/aeonist/max-inspector/main/deploy/server-setup.sh | sudo bash
 ```
 
-Скрипт спросит `BOT_TOKEN` и сделает остальное сам ([`deploy/server-setup.sh`](deploy/server-setup.sh)):
+Скрипт спросит публичный SSH-ключ и `BOT_TOKEN` и сделает остальное сам ([`deploy/server-setup.sh`](deploy/server-setup.sh)):
 
-- закроет файрволом всё, кроме SSH, 80 и 443, и включит fail2ban;
+- оставит вход на сервер только по ключу, закроет файрволом всё, кроме SSH, 80 и 443, включит fail2ban и автоматические обновления безопасности;
 - поставит Docker и скачает репозиторий в `/opt/max-inspector`;
 - определит внешний IP и запишет в `.env` адрес `WEBAPP_URL=https://<IP>.sslip.io` и `MINIAPP_MODE=openapp`;
 - запустит приложение за Caddy, который сам получит и будет продлевать HTTPS-сертификат ([`deploy/compose.server.yaml`](deploy/compose.server.yaml));
@@ -119,7 +119,7 @@ curl -fsSL https://raw.githubusercontent.com/aeonist/max-inspector/main/deploy/s
 
 Пока новый адрес не привязан к боту, кнопки в режиме `openapp` ведут на старый адрес. Временно помогает режим `link`: в `/opt/max-inspector/.env` поставить `MINIAPP_MODE=link` и снова запустить команду установки.
 
-Вход на сервер лучше сразу закрыть ключом. На своём компьютере выполните `ssh-copy-id root@<IP сервера>`, затем на сервере ту же команду установки с флагом: `curl ... | sudo bash -s -- --lock-ssh`. Без ключа на сервере скрипт откажется отключать пароль, чтобы не потерять доступ.
+Ключ создаётся на своём компьютере командой `ssh-keygen -t ed25519` (Windows, macOS и Linux), а публичная часть лежит в `~/.ssh/id_ed25519.pub`: её содержимое и вставляется в скрипт. После этого вход по паролю выключен, заходить нужно командой `ssh root@<IP сервера>` с того же компьютера. Если ключ потерян, доступ возвращается через консоль в панели хостинга. Если нажать Enter вместо ключа, пароль останется, и скрипт об этом предупредит.
 
 `deploy.py` — прежний способ выкладки по SSH в службу systemd без Docker, для нового сервера он не нужен.
 

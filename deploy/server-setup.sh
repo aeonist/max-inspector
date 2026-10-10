@@ -5,6 +5,7 @@
 #
 # What it does (safe to run again, it then updates the app and keeps .env and data):
 #   - firewall: only SSH, 80 and 443 are open; fail2ban against SSH password guessing
+#   - asks for your public SSH key once and then turns password login off
 #   - installs Docker, clones the repo to /opt/max-inspector
 #   - asks for BOT_TOKEN once, sets WEBAPP_URL=https://<public IP>.sslip.io
 #   - starts the app behind Caddy (automatic HTTPS certificate)
@@ -35,22 +36,31 @@ done
 
 [ "$(id -u)" -eq 0 ] || die "запустите от root: ... | sudo bash"
 
+SSH_LOCK_CONF=/etc/ssh/sshd_config.d/00-max-inspector.conf
+
+# authorized_keys of the user who ran sudo (root when logged in as root)
+keys_file() {
+  if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then
+    echo "$(getent passwd "$SUDO_USER" | cut -d: -f6)/.ssh/authorized_keys"
+  else
+    echo /root/.ssh/authorized_keys
+  fi
+}
+
 # SSH key-only login. Refuses to run without a key, so the server can't be locked out.
 lock_ssh() {
-  local keys=/root/.ssh/authorized_keys
-  if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then
-    keys="$(getent passwd "$SUDO_USER" | cut -d: -f6)/.ssh/authorized_keys"
-  fi
+  local keys
+  keys="$(keys_file)"
   if ! grep -qE '^(ssh-|ecdsa-|sk-)' "$keys" 2>/dev/null; then
     die "в $keys нет ни одного ключа. Сначала на своём компьютере выполните: ssh-copy-id root@<IP сервера>"
   fi
-  cat > /etc/ssh/sshd_config.d/00-max-inspector.conf <<'EOF'
+  cat > "$SSH_LOCK_CONF" <<'EOF'
 # Key-only SSH login (deploy/server-setup.sh --lock-ssh)
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitRootLogin prohibit-password
 EOF
-  sshd -t || { rm -f /etc/ssh/sshd_config.d/00-max-inspector.conf; die "конфигурация SSH не прошла проверку, ничего не изменено"; }
+  sshd -t || { rm -f "$SSH_LOCK_CONF"; die "конфигурация SSH не прошла проверку, ничего не изменено"; }
   systemctl reload ssh 2>/dev/null || systemctl reload sshd
   say "Вход по паролю выключен, теперь только по ключу."
 }
@@ -64,7 +74,28 @@ export DEBIAN_FRONTEND=noninteractive
 
 say "Ставлю системные пакеты"
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl git ufw fail2ban >/dev/null
+apt-get install -y -qq ca-certificates curl git ufw fail2ban unattended-upgrades >/dev/null
+# Security updates install themselves every day
+printf 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgrade "1";\n' > /etc/apt/apt.conf.d/20auto-upgrades
+
+# Password login over SSH is how small servers get hacked: switch to a key right away
+if [ ! -f "$SSH_LOCK_CONF" ]; then
+  echo
+  echo "Вставьте публичный SSH-ключ со своего компьютера (строка ssh-ed25519 AAAA...)"
+  printf 'и нажмите Enter. Просто Enter: оставить вход по паролю: '
+  read -r PUBKEY < /dev/tty || PUBKEY=""
+  if [ -n "$PUBKEY" ]; then
+    printf '%s\n' "$PUBKEY" | ssh-keygen -l -f - >/dev/null 2>&1 || die "это не похоже на публичный SSH-ключ, ничего не изменено"
+    KEYS="$(keys_file)"
+    mkdir -p "$(dirname "$KEYS")" && chmod 700 "$(dirname "$KEYS")"
+    grep -qxF "$PUBKEY" "$KEYS" 2>/dev/null || printf '%s\n' "$PUBKEY" >> "$KEYS"
+    chmod 600 "$KEYS"
+    [ -z "${SUDO_USER:-}" ] || chown -R "$SUDO_USER:" "$(dirname "$KEYS")"
+    lock_ssh
+  else
+    warn "Вход по паролю оставлен. Это небезопасно: лучше перезапустить скрипт и вставить ключ."
+  fi
+fi
 
 # Small VPS (1 GB) can run out of memory while building the image
 if [ "$(swapon --noheadings | wc -l)" -eq 0 ] && [ ! -f /swapfile ]; then
@@ -166,7 +197,9 @@ cat <<EOF
     sed -i 's/^MINIAPP_MODE=.*/MINIAPP_MODE=link/' $APP_DIR/.env && cd $APP_DIR && ${COMPOSE[*]} up -d
 
   Обновить приложение до свежего кода: запустите эту же команду установки ещё раз.
-
-  Защита входа: на своём компьютере выполните  ssh-copy-id root@${PUBLIC_IP:-<IP сервера>}
-  затем на сервере:  curl -fsSL https://raw.githubusercontent.com/aeonist/max-inspector/main/deploy/server-setup.sh | sudo bash -s -- --lock-ssh
 EOF
+if [ -f "$SSH_LOCK_CONF" ]; then
+  echo "  Вход на сервер: только по SSH-ключу."
+else
+  warn "  Вход на сервер по паролю всё ещё включён. Запустите команду установки ещё раз и вставьте SSH-ключ."
+fi
